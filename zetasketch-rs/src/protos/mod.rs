@@ -46,8 +46,10 @@ pub use zetasketch::aggregator::AggregatorValueStatsProto;
 pub use zetasketch::aggregator::DefaultOpsType;
 pub use zetasketch::aggregator::default_ops_type::Id as DefaultOpsTypeId;
 
-
 pub use zetasketch::custom_value_type::CustomValueType;
 pub use zetasketch::custom_value_type::custom_value_type::Id as CustomValueTypeId;
 
 pub use zetasketch::hllplus_unique::HyperLogLogPlusUniqueStateProto;
+pub mod exts {
+    pub use super::zetasketch::hllplus_unique::exts::hyperloglogplus_unique_state as hyperloglogplus_unique_state;
+}
