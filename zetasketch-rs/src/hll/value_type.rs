@@ -81,7 +81,7 @@ mod tests {
     pub fn test_from_default_ops_type_number() {
         let value_type = ValueType::from(DefaultOpsTypeId::INT32);
         assert!(matches!(value_type, ValueType::DefaultOpsType(DefaultOpsTypeId::INT32)));
-        assert_eq!(i32::from(value_type), DefaultOpsTypeId::INT32.value());
+        assert_eq!(i32::from(value_type), DefaultOpsTypeId::INT32.value()   );
     }
 
     #[test]

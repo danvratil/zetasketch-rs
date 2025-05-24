@@ -1,5 +1,7 @@
 // Replicates com.google.zetasketch.internal.hllplus.Encoding.java
 
+use std::cmp::Ordering;
+
 use crate::error::SketchError;
 
 /// Computes the number of leading zeros + 1 in the lower `bits` of `value`.
@@ -119,6 +121,17 @@ impl PartialEq for Sparse {
     }
 }
 
+impl PartialOrd for Sparse {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.normal_precision < other.normal_precision
+            || self.sparse_precision < other.sparse_precision {
+                return Some(Ordering::Less);
+        }
+
+        return None
+    }
+}
+
 const RHOW_BITS: i32 = 6;
 const RHOW_MASK: u32 = (1 << RHOW_BITS) - 1;
 
@@ -154,7 +167,7 @@ impl Sparse {
         })
     }
 
-    #[cfg(test)]
+    // FIXME: Redo to return Result<(), SketchError> with IncompativeEncoding error
     pub fn assert_compatible(&self, other: &Self) {
         if ((self.normal_precision <= other.normal_precision)
             && (self.sparse_precision <= other.sparse_precision))
@@ -352,8 +365,7 @@ impl Sparse {
         result
     }
 
-
-    pub fn downgrade(&self, iter: impl Iterator<Item = u32>, target: &Sparse) -> Vec<u32> {
+    pub fn downgrade<I: Iterator<Item = u32>>(&self, iter: I, target: &Sparse) -> Vec<u32> {
         iter.map(|val| self.downgrade_sparse_value(val, target)).collect()
     }
 

@@ -7,7 +7,7 @@ use crate::protos::{AggregatorStateProto, AggregatorType, HyperLogLogPlusUniqueS
 use protobuf::rt::WireType;
 use protobuf::{CodedInputStream, CodedOutputStream, Enum};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct State {
     /// The type of the aggregator
     pub r#type: AggregatorType,
@@ -24,9 +24,9 @@ pub struct State {
     /// Precision / number of buckets for the sparse representation
     pub sparse_precision: i32,
     /// Normal data representation
-    data: Option<Vec<u8>>,
+    pub data: Option<Vec<u8>>,
     /// Sparse data representation
-    sparse_data: Option<Vec<u8>>,
+    pub sparse_data: Option<Vec<u8>>,
 }
 
 impl Default for State {

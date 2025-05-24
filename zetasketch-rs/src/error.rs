@@ -15,4 +15,6 @@ pub enum SketchError {
     #[error("Invalid argument: {0}")]
     IllegalArgument(String),
     // TODO: Add more specific error types as needed.
+    #[error("Generic error: {0}")]
+    Generic(String),
 }

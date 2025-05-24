@@ -12,6 +12,7 @@ log = "0.4"
 thiserror = "1.0"
 ordered-float = "5.0.0"
 protobuf = "3.7.2"
+itertools = "0.14.0"
 
 # TODO: Add a specific hashing library if Fingerprint2011 proves too difficult to replicate exactly,
 # or if a well-tested crate exists for it. For now, we plan to implement it directly.
@@ -22,3 +23,4 @@ protobuf-codegen = "3.7.2"
 
 [dev-dependencies]
 approx = "0.5.1"
+rand = "0.9.1"
