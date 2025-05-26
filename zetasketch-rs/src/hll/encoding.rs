@@ -4,40 +4,14 @@ use std::cmp::Ordering;
 
 use crate::error::SketchError;
 
-/// Computes the number of leading zeros + 1 in the lower `bits` of `value`.
-/// `value` here is the part of the hash *after* the index bits have been shifted out,
-/// and `bits` is the number of bits in this remaining part (e.g., 64 - precision).
 pub fn compute_rho_w(value_suffix: u64, bits: i32) -> u8 {
-    if bits == 0 {
-        // Should not happen if precision < 64
-        return 1;
+    let w = value_suffix << (64 - bits);
+
+    if w == 0 {
+        (bits + 1) as u8
+    } else {
+        w.leading_zeros() as u8 + 1
     }
-    // Mask to keep only the relevant `bits` from the LSB side.
-    // If bits is, say, 59 (for precision 5), we want to look at those 59 bits.
-    // Java: long w = value << (64 - bits);
-    // This means we are interested in the leading zeros of `value_suffix` *within its lowest `bits`*.
-    // Example: precision=5, bits = 59. Hash suffix (lowest 59 bits) is `0010...`.
-    // We need to count leading zeros in this 59-bit segment.
-    // If `value_suffix` already has its higher bits zeroed out (i.e., it IS the suffix),
-    // then `value_suffix.leading_zeros()` counts from MSB of u64.
-    // We need to adjust for the fact that we're looking at a segment of `bits` length.
-
-    // If the relevant part `w` is all zeros, rhoW is `bits + 1`.
-    // The Java code `long w = value << (64 - bits);` effectively takes the `bits` LSBs of original hash
-    // (after index part) and shifts them to become MSBs of `w`.
-    // Then `Long.numberOfLeadingZeros(w)` is called.
-
-    if value_suffix == 0 {
-        // All relevant bits are zero
-        return (bits + 1) as u8;
-    }
-
-    // Consider only the lowest `bits` of `value_suffix`.
-    // We can find leading zeros of `value_suffix` and subtract (64 - bits) to get leading zeros within the window.
-    let total_leading_zeros = value_suffix.leading_zeros() as i32;
-    let leading_zeros_in_window = total_leading_zeros - (64 - bits);
-
-    (leading_zeros_in_window + 1) as u8
 }
 
 /// Computes a downgraded rho_w (or rho_w') in a target precision
@@ -189,15 +163,7 @@ impl Sparse {
 
     pub fn encode(&self, hash: u64) -> u32 {
         let sparse_index = (hash >> (64 - self.sparse_precision)) as u32;
-
-        let num_sparse_suffix_bits = 64 - self.sparse_precision;
-        let sparse_suffix_mask = if num_sparse_suffix_bits >= 64 {
-            !0
-        } else {
-            (1u64 << num_sparse_suffix_bits) - 1
-        };
-        let sparse_value_suffix = hash & sparse_suffix_mask;
-        let sparse_rho_w = compute_rho_w(sparse_value_suffix, num_sparse_suffix_bits);
+        let sparse_rho_w = compute_rho_w(hash,  64 - self.sparse_precision);
 
         self.encode_parts(sparse_index, sparse_rho_w)
     }
@@ -206,15 +172,11 @@ impl Sparse {
         assert!(sparse_index < (1u32 << self.sparse_precision));
         assert!(sparse_rho_w < (1u8 << RHOW_BITS)); // rho_w' fits in RHOW_BITS
 
-        let diff_precision = self.sparse_precision - self.normal_precision;
-        let reconstruction_mask = (1u32 << diff_precision) - 1;
-
-        if (sparse_index & reconstruction_mask) != 0 {
-            // Normal rhoW can be reconstructed, store only sparse_index
+        let mask = (1 << (self.sparse_precision - self.normal_precision)) - 1;
+        if sparse_index & mask != 0 {
             sparse_index
         } else {
-            // Normal rhoW cannot be reconstructed, store flag | normal_index | sparse_rho_w
-            let normal_index = sparse_index >> diff_precision;
+            let normal_index = sparse_index >> (self.sparse_precision - self.normal_precision);
             self.rho_encoded_flag | (normal_index << RHOW_BITS) | (sparse_rho_w as u32)
         }
     }
@@ -250,12 +212,7 @@ impl Sparse {
 
     pub fn decode_normal_rho_w(&self, sparse_value: u32) -> u8 {
         if (sparse_value & self.rho_encoded_flag) == 0 {
-            // Not rho-encoded. Normal rhoW is computed from last (sp-p) bits of sparse_index.
-            let num_relevant_bits = self.sparse_precision - self.normal_precision;
-            let suffix_mask = (1u32 << num_relevant_bits) - 1;
-            let relevant_suffix_of_sparse_index = sparse_value & suffix_mask;
-
-            compute_rho_w(relevant_suffix_of_sparse_index as u64, num_relevant_bits)
+            compute_rho_w(sparse_value.into(), self.sparse_precision - self.normal_precision)
         } else {
             // Rho-encoded. Normal rhoW is sparse_rho_w' + (sp - p)
             ((sparse_value & RHOW_MASK) as i32 + (self.sparse_precision - self.normal_precision))

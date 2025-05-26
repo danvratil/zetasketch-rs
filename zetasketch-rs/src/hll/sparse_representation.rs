@@ -10,13 +10,13 @@ use crate::hll::encoding;
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
-use crate::utils::{DifferenceDecoder, MergedIntIterator, SimpleVarIntReader};
+use crate::utils::{DifferenceDecoder, GrowingVarIntWriter, MergedIntIterator, SimpleVarIntReader, WriteBuffer};
 
 use super::representation::RepresentationUnion;
 
 #[derive(Debug, Clone)] // Clone for when state is cloned
 pub struct SparseRepresentation {
-    state: RefCell<State>, // Renamed from state_ref
+    state: RefCell<State>, // FIXME: Do we really need the refcell?
     encoding: encoding::Sparse,
     max_sparse_data_bytes: usize,
     max_buffer_elements: usize,
@@ -51,6 +51,7 @@ impl SparseRepresentation {
             encoding: enc,
             max_sparse_data_bytes,
             max_buffer_elements,
+            // FIXME: Our values are already uniformly hashed, so we could use an identity hasher.
             buffer: HashSet::new(),
         })
     }
@@ -59,7 +60,7 @@ impl SparseRepresentation {
         NormalRepresentation::check_precision(normal_precision)?; // Delegate to Normal's check
         if !(normal_precision..=Self::MAXIMUM_SPARSE_PRECISION).contains(&sparse_precision) {
             Err(SketchError::IllegalArgument(format!(
-                "Expected sparse precision to be >= normal precision ({}) and <= {} but was {}",
+                "Expected sparse precision to be >= normal precision ({}) and <= {} but was {}.",
                 normal_precision,
                 Self::MAXIMUM_SPARSE_PRECISION,
                 sparse_precision
@@ -71,29 +72,18 @@ impl SparseRepresentation {
 
     /// Converts this sparse representation to a NormalRepresentation.
     fn normalize(&mut self) -> Result<NormalRepresentation, SketchError> {
-        let mut normal_repr = NormalRepresentation::new(self.state.borrow().clone())?;
+        let normal_repr = NormalRepresentation::new(self.state.borrow().clone())?;
 
-        // Merge existing sparseData (if any) into normal_repr
-        if let Some(sparse_data_bytes) = self.state.borrow().sparse_data.as_ref() {
-            if !sparse_data_bytes.is_empty() {
-                // TODO: Use DifferenceDecoder here
-                // for decoded_val in DifferenceDecoder::new(sparse_data_bytes) {
-                //    normal_repr.add_sparse_value_internal(self.encoding, decoded_val, &self.encoding)?;
-                // }
+        let normal_repr = match normal_repr.merge_from_sparse(self)? {
+            RepresentationUnion::Normal(repr) => repr,
+            _ => {
+                return Err(SketchError::InvalidState(
+                    "Normal representation is not valid".to_string(),
+                ));
             }
-        }
-
-        // Merge buffer into normal_repr
-        let mut sorted_buffer: Vec<_> = self.buffer.iter().copied().collect();
-        sorted_buffer.sort_unstable(); // Ensure sorted for efficient merging if normal_repr can use it
-        for &sparse_val in &sorted_buffer {
-            // TODO: normal_repr needs an add_sparse_value method
-            // normal_repr.add_sparse_value_internal(self.encoding, sparse_val, &self.encoding)?;
-        }
-
-        self.state.borrow_mut().sparse_data = None; // Clear sparse data from original state
+        };
+        self.state.borrow_mut().sparse_data = None;
         self.state.borrow_mut().sparse_size = 0;
-        self.buffer.clear();
 
         Ok(normal_repr)
     }
@@ -103,15 +93,10 @@ impl SparseRepresentation {
         if self.buffer.is_empty() {
             return Ok(());
         }
-        // TODO: Implement Difference Encoding and Merging
-        // 1. Decode existing self.state_ref.sparse_data (if any) using DifferenceDecoder.
-        // 2. Sort self.buffer.
-        // 3. Merge decoded_data_iter and sorted_buffer_iter.
-        // 4. Deduplicate using self.encoding.dedupe logic (needs an iterator adapter).
-        // 5. Encode the merged, deduped iterator into new_sparse_data using DifferenceEncoder.
-        // 6. Update self.state_ref.sparse_data and self.state_ref.sparse_size.
-        // 7. Clear self.buffer.
-        self.buffer.clear(); // Placeholder
+
+        if let Some(iter) = self.deduped_iter() {
+            self.set(iter)?;
+        }
         Ok(())
     }
 
@@ -139,10 +124,7 @@ impl SparseRepresentation {
         normal.add_sparse_values(&self.encoding, Some(self.buffer.clone()))
     }
 
-    fn downgrade(
-        mut self,
-        encoding: &encoding::Sparse,
-    ) -> Result<RepresentationUnion, SketchError> {
+    fn downgrade(self, encoding: &encoding::Sparse) -> Result<RepresentationUnion, SketchError> {
         if !(encoding < &self.encoding) {
             return Ok(RepresentationUnion::Sparse(self));
         }
@@ -199,11 +181,19 @@ impl SparseRepresentation {
         Ok(repr)
     }
 
-    fn set(&mut self, iter: impl IntoIterator<Item = u32>) {
-        self.buffer.clear();
+    fn set(&mut self, iter: impl IntoIterator<Item = u32>) -> Result<(), SketchError> {
+        let mut writer = GrowingVarIntWriter::new();
+
+        let mut size = 0;
         for val in iter {
-            self.buffer.insert(val);
+            writer.write_varint(val as i32)?;
+            size += 1;
         }
+
+        self.buffer.clear();
+        self.state_mut().sparse_data = Some(writer.into_vec());
+        self.state_mut().sparse_size = size;
+        Ok(())
     }
 
     fn update_representation(mut self) -> Result<RepresentationUnion, SketchError> {
@@ -252,6 +242,25 @@ impl SparseRepresentation {
         &self,
     ) -> Option<
         Either<
+            MergedIntIterator<impl Iterator<Item = u32>, impl Iterator<Item = u32>>,
+            Either<impl Iterator<Item = u32>, impl Iterator<Item = u32>>,
+        >,
+    > {
+        let a = self.data_iterator();
+        let b = self.buffer_iterator();
+
+        match (a, b) {
+            (Some(a), Some(b)) => Some(Either::Left(MergedIntIterator::new(a.into_iter(), b))),
+            (Some(a), None) => Some(Either::Right(Either::Left(a.into_iter()))),
+            (None, Some(b)) => Some(Either::Right(Either::Right(b))),
+            (None, None) => None,
+        }
+    }
+
+    fn deduped_iter(
+        &self,
+    ) -> Option<
+        Either<
             MergedIntIterator<std::vec::IntoIter<u32>, impl Iterator<Item = u32>>,
             Either<std::vec::IntoIter<u32>, impl Iterator<Item = u32>>,
         >,
@@ -288,13 +297,16 @@ impl RepresentationOps for SparseRepresentation {
                 RepresentationUnion::Sparse(repr) => repr.add_sparse_value(encoding, sparse_value),
                 RepresentationUnion::Normal(repr) => repr.add_sparse_value(encoding, sparse_value),
                 RepresentationUnion::Invalid => {
-                    return Err(SketchError::InvalidState("Invalid representation".to_string()));
+                    return Err(SketchError::InvalidState(
+                        "Invalid representation".to_string(),
+                    ));
                 }
             };
         }
 
         if &self.encoding < encoding {
-            self.buffer.insert(encoding.downgrade_sparse_value(sparse_value, &self.encoding));
+            self.buffer
+                .insert(encoding.downgrade_sparse_value(sparse_value, &self.encoding));
         } else {
             self.buffer.insert(sparse_value);
         }
@@ -351,14 +363,17 @@ impl RepresentationOps for SparseRepresentation {
             None => sparse_values.into_iter().collect(),
         };
 
-        self.set(self.encoding.dedupe(sorted));
+        self.set(self.encoding.dedupe(sorted))?;
         self.update_representation()
     }
 
     fn estimate(&self) -> Result<i64, SketchError> {
         // Made &mut self due to flush_buffer
         // FIXME: Do we need flush_buffer()? If so, should be have buffer behind interior mutability?
-        //self.flush_buffer()?;
+        unsafe {
+            let f = self as *const SparseRepresentation as *mut SparseRepresentation;
+            f.as_mut().unwrap().flush_buffer()?;
+        }
 
         let buckets = 1 << self.state.borrow().sparse_precision;
         let num_zeros = buckets - self.state.borrow().sparse_size;
@@ -489,7 +504,11 @@ mod tests {
         let repr = repr.add_sparse_value(&source_encoding, sparse_value)?;
         let repr = match repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
-            _ => return Err(SketchError::IllegalArgument("Expected SparseRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Expected SparseRepresentation".to_string(),
+                ))
+            }
         };
 
         let final_state = repr.state();
@@ -511,7 +530,11 @@ mod tests {
         let final_repr = match result_repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
             RepresentationUnion::Normal(repr) => RepresentationUnion::Normal(repr),
-            _ => return Err(SketchError::IllegalArgument("Unexpected representation type".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Unexpected representation type".to_string(),
+                ))
+            }
         };
 
         let final_state = final_repr.state();
@@ -532,7 +555,11 @@ mod tests {
         let repr = repr.add_sparse_values(&source_encoding, Some(sparse_values.clone()))?;
         let repr = match repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
-            _ => return Err(SketchError::IllegalArgument("Expected SparseRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Expected SparseRepresentation".to_string(),
+                ))
+            }
         };
 
         let final_state = repr.state();
@@ -562,7 +589,11 @@ mod tests {
         let repr = repr.add_sparse_values(&source_encoding, None::<Vec<u32>>)?;
         let repr = match repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
-            _ => return Err(SketchError::IllegalArgument("Expected SparseRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Expected SparseRepresentation".to_string(),
+                ))
+            }
         };
 
         let final_state = repr.state();
@@ -577,11 +608,16 @@ mod tests {
         let source_encoding = SparseEncoding::new(10, 13)?;
         let sparse_values = vec![0b0000000000001u32, 0b0000000001111u32];
 
-        let result_repr = initial_sparse.add_sparse_values(&source_encoding, Some(sparse_values.clone()))?;
+        let result_repr =
+            initial_sparse.add_sparse_values(&source_encoding, Some(sparse_values.clone()))?;
         let final_repr = match result_repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
             RepresentationUnion::Normal(repr) => RepresentationUnion::Normal(repr),
-            _ => return Err(SketchError::IllegalArgument("Unexpected representation type".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Unexpected representation type".to_string(),
+                ))
+            }
         };
 
         let final_state = final_repr.state();
@@ -600,7 +636,11 @@ mod tests {
         let final_repr = match result_repr {
             RepresentationUnion::Sparse(repr) => repr.compact()?,
             RepresentationUnion::Normal(repr) => RepresentationUnion::Normal(repr),
-            _ => return Err(SketchError::IllegalArgument("Unexpected representation type".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "Unexpected representation type".to_string(),
+                ))
+            }
         };
 
         let final_state = final_repr.state();

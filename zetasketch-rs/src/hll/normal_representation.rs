@@ -15,9 +15,7 @@ use super::sparse_representation::SparseRepresentation;
 
 #[derive(Debug, Clone)] // Clone for when state is cloned
 pub struct NormalRepresentation {
-    // Zetasketch is generally not thread-safe. To ensure maximum performance, we use a RefCell instead
-    // of a Mutex here to allow for interior mutability.
-    state: RefCell<State>,
+    state: RefCell<State>, // FIXME: Do we really need the refcell?
     encoding: encoding::Normal,
 }
 
