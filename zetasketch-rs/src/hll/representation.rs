@@ -172,7 +172,7 @@ impl Representation {
     pub fn merge_from_normal(&mut self, other: &NormalRepresentation) -> Result<(), SketchError> {
         self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
             RepresentationUnion::Normal(n) => n.merge_from_normal(other)?,
-            RepresentationUnion::Sparse(s) => {
+            RepresentationUnion::Sparse(_s) => {
                 // Sparse merging with Normal always results in Normal.
                 // The typical flow is: sparse normalizes itself, then merges the other normal representation.
                 // let mut normalized_self = s.normalize_representation()?;

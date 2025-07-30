@@ -198,9 +198,12 @@ impl NormalRepresentation {
             }
         } else {
             return Err(SketchError::InvalidState(format!(
-                "Decoded index {} out of bounds for data length {}",
+                "Decoded index {} out of bounds for data length {} (sparse_value={}, source_precision={}, target_precision={})",
                 idx,
-                data.len()
+                data.len(),
+                sparse_value,
+                source_sparse_encoding.sparse_precision,
+                target_normal_encoding.precision
             )));
         }
         Ok(())
@@ -601,7 +604,7 @@ mod tests {
 
     #[test]
     fn merge_downgrades_sparse_precision() -> Result<(), SketchError> {
-        let mut a = create_normal(10, 14)?; // sparse_precision = 14
+        let a = create_normal(10, 14)?; // sparse_precision = 14
         let b = create_normal(10, 15)?; // sparse_precision = 15
 
         // Merging a into b. b should downgrade its sparse_precision to 14.
@@ -717,19 +720,18 @@ mod tests {
         //   If `rho_w_val = 64-p+1` (all zeros in suffix):
         //      `hash << p = 0`. So `hash_suffix_part = 0`.
 
-        let mut hash_suffix_part = 0u64;
-        if rho_w_val <= (64 - p) as u8 {
+        let hash_suffix_part = if rho_w_val <= (64 - p) as u8 {
             // e.g. p=10, max rho_w from non-zero suffix is 54.
-            hash_suffix_part = (1u64 << (64 - rho_w_val as i32)) >> p;
+            (1u64 << (64 - rho_w_val as i32)) >> p
         } else if rho_w_val == (64 - p + 1) as u8 {
             // all zeros in suffix
-            hash_suffix_part = 0;
+            0
         } else {
             return Err(SketchError::IllegalArgument(format!(
                 "rho_w_val {} is too large for p={}",
                 rho_w_val, p
             )));
-        }
+        };
 
         let final_hash = (index << (64 - p)) | hash_suffix_part;
         let repr = repr.add_hash(final_hash)?;

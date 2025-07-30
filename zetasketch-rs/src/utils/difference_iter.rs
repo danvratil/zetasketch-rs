@@ -24,7 +24,7 @@ impl<R: VarIntReader> Iterator for DifferenceDecoder<R> {
         if self.reader.has_remaining() {
             match self.reader.read_varint() {
                 Ok(diff) => {
-                    self.last += diff as u32;
+                    self.last = self.last.wrapping_add(diff as u32);
                     Some(self.last)
                 }
                 Err(_) => None, // Error reading, end iteration

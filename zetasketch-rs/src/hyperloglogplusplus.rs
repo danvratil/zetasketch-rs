@@ -281,7 +281,7 @@ mod tests {
         },
     };
     use protobuf::{Message, UnknownValueRef}; // For to_byte_array, parse_from_bytes
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::{rngs::StdRng, SeedableRng};
 
     const TEST_NORMAL_PRECISION: i32 = HyperLogLogPlusPlus::DEFAULT_NORMAL_PRECISION; // 15
     const TEST_SPARSE_PRECISION: i32 =
@@ -359,7 +359,6 @@ mod tests {
             .sparse_precision(sparse_precision);
 
         let num_sketches = 100;
-        let mut random = StdRng::seed_from_u64(123);
 
         let mut agg_state_protos: Vec<AggregatorStateProto> = Vec::new();
         let mut overall_aggregator = hll_builder
