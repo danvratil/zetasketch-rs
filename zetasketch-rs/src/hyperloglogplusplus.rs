@@ -204,7 +204,8 @@ impl Aggregator<i64, HyperLogLogPlusPlus> for HyperLogLogPlusPlus {
         self.representation.state().to_byte_array()
     }
 
-    fn serialize_to_proto(&self) -> Result<AggregatorStateProto, SketchError> {
+    fn serialize_to_proto(mut self) -> Result<AggregatorStateProto, SketchError> {
+        self.representation.compact()?;
         let bytes = self.representation.state().to_byte_array()?;
         AggregatorStateProto::parse_from_bytes(&bytes).map_err(SketchError::ProtoDeserialization)
     }

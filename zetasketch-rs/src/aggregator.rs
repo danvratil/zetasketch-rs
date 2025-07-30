@@ -13,5 +13,5 @@ pub trait Aggregator<R, A: Aggregator<R, A>> {
 
     fn serialize_to_bytes(&self) -> Result<Vec<u8>, SketchError>;
 
-    fn serialize_to_proto(&self) -> Result<AggregatorStateProto, SketchError>;
+    fn serialize_to_proto(self) -> Result<AggregatorStateProto, SketchError>;
 }
