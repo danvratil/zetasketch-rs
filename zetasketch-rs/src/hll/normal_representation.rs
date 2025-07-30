@@ -461,13 +461,10 @@ mod tests {
         let mut expected_data = vec![0u8; 1 << 10];
         // The sparse_value was encoded for p=10. When added to repr (now p=10),
         // it should be decoded directly, not downgraded further.
-        let target_normal_encoding = NormalEncoding::new(10)?; // repr's new encoding
+        let normal_encoding = NormalEncoding::new(10)?; // repr's new encoding
 
-        // In Java, sparseEncoding.decodeAndDowngradeNormalIndex(sparseValue, normalEncoding)
-        // is used. If normalEncoding (p=10) matches sparseEncoding's normal p (p=10),
-        // it becomes a direct decode.
-        let new_index = source_sparse_encoding.decode_normal_index(sparse_value) as usize;
-        let new_rho_w = source_sparse_encoding.decode_normal_rho_w(sparse_value);
+        let new_index = source_sparse_encoding. decode_and_downgrade_normal_index(sparse_value, normal_encoding.precision) as usize;
+        let new_rho_w = source_sparse_encoding.decode_and_downgrade_normal_rho_w(sparse_value, normal_encoding.precision);
 
         if new_index < expected_data.len() {
             expected_data[new_index] = new_rho_w;
