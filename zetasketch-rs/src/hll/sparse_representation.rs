@@ -400,7 +400,6 @@ impl RepresentationOps for SparseRepresentation {
     fn compact(mut self) -> Result<RepresentationUnion, SketchError> {
         self.flush_buffer()?;
         if self.state.borrow().sparse_data.is_none() {
-            // Java C++ compatibility: ensure sparseData is at least an empty byte array
             self.state.borrow_mut().sparse_data = Some(Vec::new());
         }
         self.update_representation()

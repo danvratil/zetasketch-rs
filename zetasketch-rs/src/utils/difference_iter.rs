@@ -1,11 +1,6 @@
-use super::buffer_traits::{VarIntReader, WriteBuffer, GrowingVarIntWriter};
+use super::buffer_traits::{GrowingVarIntWriter, VarIntReader, WriteBuffer};
 use crate::error::SketchError;
 
-// TODO: DifferenceEncoder and DifferenceDecoder are needed for sparseData handling.
-// These will operate on Vec<u8> or &[u8].
-// For now, we'll use placeholders for their iterators.
-
-// Placeholder for DifferenceDecoder functionality
 pub struct DifferenceDecoder<R: VarIntReader> {
     reader: R,
     last: u32,
@@ -13,7 +8,6 @@ pub struct DifferenceDecoder<R: VarIntReader> {
 
 impl<R: VarIntReader> DifferenceDecoder<R> {
     pub fn new(reader: R) -> Self {
-        // In a real implementation, this would parse the start of the data.
         Self { reader, last: 0 }
     }
 }
@@ -35,37 +29,40 @@ impl<R: VarIntReader> Iterator for DifferenceDecoder<R> {
     }
 }
 
-// Placeholder for DifferenceEncoder functionality
 pub struct DifferenceEncoder {
     writer: GrowingVarIntWriter,
-    last: i32,
+    last: Option<i32>,
 }
 
 impl DifferenceEncoder {
     pub fn new() -> Self {
-        Self { 
+        Self {
             writer: GrowingVarIntWriter::new(),
-            last: 0 
+            last: None,
         }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             writer: GrowingVarIntWriter::with_capacity(capacity),
-            last: 0,
+            last: None,
         }
     }
 
     pub fn put_int(&mut self, val: i32) -> Result<(), SketchError> {
-        assert!(val >= 0, "Only positive integers are supported");
-        assert!(
-            val >= self.last,
-            "{} put after {} but values are required to be in increasing order",
-            val,
-            self.last
-        );
-        self.writer.write_varint(val - self.last)?;
-        self.last = val;
+        if val < 0 {
+            return Err(SketchError::IllegalArgument(
+                "Only positive integers are supported".to_string(),
+            ));
+        }
+        if self.last.is_some_and(|last| val < last) {
+            return Err(SketchError::IllegalArgument(format!(
+                "{} put after {:?} but values are required to be in increasing order",
+                val, self.last
+            )));
+        }
+        self.writer.write_varint(val - self.last.unwrap_or(0))?;
+        self.last = Some(val);
         Ok(())
     }
 
@@ -81,5 +78,110 @@ impl DifferenceEncoder {
 impl Default for DifferenceEncoder {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::var_int::VarInt;
+
+    use super::*;
+
+    fn varints(values: &[i32]) -> Vec<u8> {
+        let mut buf = Vec::new();
+        for &val in values {
+            let size = VarInt::var_int_size(val);
+            let pos = buf.len();
+            buf.resize(buf.len() + size, 0);
+            VarInt::set_var_int(val, &mut buf[pos..]);
+        }
+        buf
+    }
+
+    mod difference_decoder {
+        use crate::utils::SimpleVarIntReader;
+
+        use super::*;
+
+        #[test]
+        fn has_next_returns_false_when_empty() {
+            let mut iter = DifferenceDecoder::new(SimpleVarIntReader::new(&[]));
+            assert!(iter.next().is_none());
+        }
+
+        #[test]
+        fn next_decodes_integers() {
+            let values = varints(&[42, 170 - 42, 2903 - 170, 20160531 - 2903]);
+            let mut iter = DifferenceDecoder::new(SimpleVarIntReader::new(&values));
+            assert_eq!(iter.next(), Some(42));
+            assert_eq!(iter.next(), Some(170));
+            assert_eq!(iter.next(), Some(2903));
+            assert_eq!(iter.next(), Some(20160531));
+            assert_eq!(iter.next(), None);
+        }
+
+        #[test]
+        fn next_throws_when_empty() {
+            let mut iter = DifferenceDecoder::new(SimpleVarIntReader::new(&[]));
+            assert!(matches!(iter.next(), None));
+        }
+    }
+
+    mod difference_encoder {
+        use super::*;
+
+        #[test]
+        fn put_int_correctly_writes_equal_elements() {
+            let mut encoder = DifferenceEncoder::new();
+            encoder.put_int(42).unwrap();
+            encoder.put_int(42).unwrap();
+
+            assert_eq!(encoder.into_vec(), varints(&[42, 42 - 42]));
+        }
+
+        #[test]
+        fn put_int_correctly_writes_multiple() {
+            let mut encoder = DifferenceEncoder::new();
+            encoder.put_int(42).unwrap();
+            encoder.put_int(170).unwrap();
+            encoder.put_int(2903).unwrap();
+
+            assert_eq!(encoder.into_vec(), varints(&[42, 170 - 42, 2903 - 170]));
+        }
+
+        #[test]
+        fn put_int_correctly_writes_single() {
+            let mut encoder = DifferenceEncoder::new();
+            encoder.put_int(42).unwrap();
+
+            assert_eq!(encoder.into_vec(), varints(&[42]));
+        }
+
+        #[test]
+        fn put_int_correctly_writes_zero() {
+            let mut encoder = DifferenceEncoder::new();
+            encoder.put_int(0).unwrap();
+
+            assert_eq!(encoder.into_vec(), varints(&[0]));
+        }
+
+        #[test]
+        fn put_int_throws_when_negative() {
+            let mut encoder = DifferenceEncoder::new();
+            assert!(matches!(
+                encoder.put_int(-1),
+                Err(SketchError::IllegalArgument(_))
+            ));
+        }
+
+        #[test]
+        fn put_int_throws_when_not_sorted() {
+            let mut encoder = DifferenceEncoder::new();
+            encoder.put_int(42).unwrap();
+            assert!(matches!(
+                encoder.put_int(12),
+                Err(SketchError::IllegalArgument(_))
+            ));
+        }
     }
 }
