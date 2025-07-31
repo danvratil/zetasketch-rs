@@ -23,7 +23,7 @@ impl NormalRepresentation {
     pub const MINIMUM_PRECISION: i32 = 10;
     pub const MAXIMUM_PRECISION: i32 = 24;
 
-    pub fn new(state: State) -> Result<Self, SketchError> {
+    pub fn new(mut state: State) -> Result<Self, SketchError> {
         Self::check_precision(state.precision)?;
         let encoding = encoding::Normal::new(state.precision)?;
 
@@ -36,6 +36,9 @@ impl NormalRepresentation {
                 )));
             }
         }
+
+        state.sparse_data = None;
+        state.sparse_size = 0;
         Ok(NormalRepresentation {
             state: RefCell::new(state),
             encoding,

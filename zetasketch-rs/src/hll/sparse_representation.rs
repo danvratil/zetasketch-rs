@@ -10,7 +10,7 @@ use crate::hll::encoding;
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
-use crate::utils::{DifferenceDecoder, GrowingVarIntWriter, MergedIntIterator, SimpleVarIntReader, WriteBuffer};
+use crate::utils::{DifferenceDecoder, DifferenceEncoder, GrowingVarIntWriter, MergedIntIterator, SimpleVarIntReader, WriteBuffer};
 
 use super::representation::RepresentationUnion;
 
@@ -72,10 +72,7 @@ impl SparseRepresentation {
 
     /// Converts this sparse representation to a NormalRepresentation.
     fn normalize(self) -> Result<NormalRepresentation, SketchError> {
-        self.state.borrow_mut().sparse_data = None;
-        self.state.borrow_mut().sparse_size = 0;
-
-        let normal_repr = NormalRepresentation::new(self.state.take())?;
+        let normal_repr = NormalRepresentation::new(self.state.borrow().clone())?;
         let normal_repr = match self.merge_into_normal(normal_repr)? {
             RepresentationUnion::Normal(repr) => repr,
             _ => {
@@ -84,7 +81,7 @@ impl SparseRepresentation {
                 ));
             }
         };
-        
+
         Ok(normal_repr)
     }
 
@@ -182,16 +179,16 @@ impl SparseRepresentation {
     }
 
     fn set(&mut self, iter: impl IntoIterator<Item = u32>) -> Result<(), SketchError> {
-        let mut writer = GrowingVarIntWriter::new();
+        let mut encoder = DifferenceEncoder::new();
 
         let mut size = 0;
         for val in iter {
-            writer.write_varint(val as i32)?;
+            encoder.put_int(val as i32)?;
             size += 1;
         }
 
         self.buffer.clear();
-        self.state_mut().sparse_data = Some(writer.into_vec());
+        self.state_mut().sparse_data = Some(encoder.into_vec());
         self.state_mut().sparse_size = size;
         Ok(())
     }
