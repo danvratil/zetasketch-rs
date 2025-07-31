@@ -328,7 +328,7 @@ impl RepresentationOps for NormalRepresentation {
 
     fn merge_from_normal(
         mut self,
-        other: &NormalRepresentation,
+        other: NormalRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
         let state_clone = self.state.get_mut().clone();
         let mut temp_self = std::mem::replace(&mut self, NormalRepresentation::new(state_clone)?);
@@ -338,7 +338,7 @@ impl RepresentationOps for NormalRepresentation {
         Self::merge_normal_data_maybe_downgrading(
             self.state.get_mut(),
             &self.encoding,
-            other.state.borrow().data.clone(),
+            other.state.borrow_mut().data.take(),
             &other.encoding,
         )?;
 
@@ -347,9 +347,9 @@ impl RepresentationOps for NormalRepresentation {
 
     fn merge_from_sparse(
         self,
-        other: &SparseRepresentation,
+        other: SparseRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
-        other.clone().merge_into_normal(self)
+        other.merge_into_normal(self)
     }
 
     fn compact(self) -> Result<RepresentationUnion, SketchError> {
@@ -618,7 +618,7 @@ mod tests {
         let target_b = b; // sp = 15
         let source_a = a; // sp = 14
 
-        let target_b = target_b.merge_from_normal(&source_a)?;
+        let target_b = target_b.merge_from_normal(source_a)?;
         assert_eq!(target_b.state().sparse_precision, 14);
         Ok(())
     }
@@ -770,7 +770,7 @@ mod tests {
             _ => return Err(SketchError::IllegalArgument("source is not a NormalRepresentation".to_string())),
         };
 
-        let target = target.merge_from_normal(&source)?;
+        let target = target.merge_from_normal(source)?;
 
         // Expected data in target (p=10)
         // Java comments:
@@ -837,7 +837,7 @@ mod tests {
             _ => return Err(SketchError::IllegalArgument("target is not a NormalRepresentation".to_string())),
         };
         // Target merges source. Target should downgrade to p_source=10.
-        let target = target.merge_from_normal(&source)?;
+        let target = target.merge_from_normal(source)?;
 
         assert_eq!(target.state().precision, p_source); // Target downgraded to 10.
 

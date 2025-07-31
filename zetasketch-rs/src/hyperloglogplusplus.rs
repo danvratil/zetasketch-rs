@@ -156,8 +156,9 @@ impl HyperLogLogPlusPlus {
     }
 
     fn check_type_and_merge(&mut self, other: HyperLogLogPlusPlus) -> Result<(), SketchError> {
-        self.representation.merge(&other.representation)?;
-        self.representation.state_mut().num_values += other.representation.state().num_values;
+        let num_values = other.representation.state().num_values;
+        self.representation.merge(other.representation)?;
+        self.representation.state_mut().num_values += num_values;
         Ok(())
     }
 

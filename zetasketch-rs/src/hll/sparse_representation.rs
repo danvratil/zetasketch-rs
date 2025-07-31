@@ -382,8 +382,8 @@ impl RepresentationOps for SparseRepresentation {
     }
 
     fn merge_from_normal(
-        mut self,
-        other: &NormalRepresentation,
+        self,
+        other: NormalRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
         // Merging a normal representation into sparse always results in a normal representation.
         let new_normal = self.normalize()?;
@@ -392,7 +392,7 @@ impl RepresentationOps for SparseRepresentation {
 
     fn merge_from_sparse(
         self,
-        other: &SparseRepresentation,
+        other: SparseRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
         self.add_sparse_values(&other.encoding, other.sorted_iter())
     }

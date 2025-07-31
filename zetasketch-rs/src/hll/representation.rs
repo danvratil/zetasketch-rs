@@ -38,13 +38,13 @@ pub trait RepresentationOps: std::fmt::Debug {
     /// Merges another NormalRepresentation into this one.
     fn merge_from_normal(
         self,
-        other: &NormalRepresentation,
+        other: NormalRepresentation,
     ) -> Result<RepresentationUnion, SketchError>;
 
     /// Merges another SparseRepresentation into this one.
     fn merge_from_sparse(
         self,
-        other: &SparseRepresentation,
+        other: SparseRepresentation,
     ) -> Result<RepresentationUnion, SketchError>;
 
     /// Makes the representation as compact as possible.
@@ -169,7 +169,7 @@ impl Representation {
         }
     }
 
-    pub fn merge_from_normal(&mut self, other: &NormalRepresentation) -> Result<(), SketchError> {
+    pub fn merge_from_normal(&mut self, other: NormalRepresentation) -> Result<(), SketchError> {
         self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
             RepresentationUnion::Normal(n) => n.merge_from_normal(other)?,
             RepresentationUnion::Sparse(_s) => {
@@ -189,7 +189,7 @@ impl Representation {
         Ok(())
     }
 
-    pub fn merge_from_sparse(&mut self, other: &SparseRepresentation) -> Result<(), SketchError> {
+    pub fn merge_from_sparse(&mut self, other: SparseRepresentation) -> Result<(), SketchError> {
         self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
             RepresentationUnion::Normal(n) => n.merge_from_sparse(other)?,
             RepresentationUnion::Sparse(s) => s.merge_from_sparse(other)?,
@@ -223,10 +223,10 @@ impl Representation {
         self.repr.state_mut()
     }
 
-    pub fn merge(&mut self, other: &Representation) -> Result<(), SketchError> {
+    pub fn merge(&mut self, other: Representation) -> Result<(), SketchError> {
         self.repr = match (
             std::mem::replace(&mut self.repr, RepresentationUnion::Invalid),
-            &other.repr,
+            other.repr,
         ) {
             (RepresentationUnion::Normal(n1), RepresentationUnion::Normal(n2)) => {
                 n1.merge_from_normal(n2)?
