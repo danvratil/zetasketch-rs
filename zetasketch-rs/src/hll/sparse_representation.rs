@@ -71,10 +71,12 @@ impl SparseRepresentation {
     }
 
     /// Converts this sparse representation to a NormalRepresentation.
-    fn normalize(&mut self) -> Result<NormalRepresentation, SketchError> {
-        let normal_repr = NormalRepresentation::new(self.state.borrow().clone())?;
+    fn normalize(self) -> Result<NormalRepresentation, SketchError> {
+        self.state.borrow_mut().sparse_data = None;
+        self.state.borrow_mut().sparse_size = 0;
 
-        let normal_repr = match normal_repr.merge_from_sparse(self)? {
+        let normal_repr = NormalRepresentation::new(self.state.take())?;
+        let normal_repr = match self.merge_into_normal(normal_repr)? {
             RepresentationUnion::Normal(repr) => repr,
             _ => {
                 return Err(SketchError::InvalidState(
@@ -82,9 +84,7 @@ impl SparseRepresentation {
                 ));
             }
         };
-        self.state.borrow_mut().sparse_data = None;
-        self.state.borrow_mut().sparse_size = 0;
-
+        
         Ok(normal_repr)
     }
 
