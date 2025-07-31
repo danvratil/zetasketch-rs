@@ -281,8 +281,65 @@ mod tests {
             AggregatorType as ProtoAggregatorType, DefaultOpsTypeId as ProtoDefaultOpsTypeId,
         },
     };
-    use protobuf::{Message, UnknownValueRef}; // For to_byte_array, parse_from_bytes
-    use rand::{rngs::StdRng, SeedableRng};
+    use protobuf::UnknownValueRef; // For to_byte_array, parse_from_bytes
+
+    struct JavaRand {
+        seed: u64,
+    }
+
+    // Java-compatible pseudo-random number generator.
+    // This follows the exact algorithm described for java.util.Random, ensuring that our tests run with the same
+    // pseudo-random data as the Java tests, which makes debugging differences much easier.
+    impl JavaRand {
+        const MULTIPLIER: u64 = 0x5DEECE66D;
+        const MASK: u64 = (1u64 << 48) - 1;
+
+        fn initial_scramble(seed: u64) -> u64 {
+            (seed ^ Self::MULTIPLIER) & Self::MASK
+        }
+
+        pub fn new(seed: u64) -> Self {
+            Self {
+                seed: Self::initial_scramble(seed),
+            }
+        }
+
+        pub fn next(&mut self, bits: u32) -> u32 {
+            let new_seed =
+                (self.seed.wrapping_mul(0x5DEECE66D).wrapping_add(0xB)) & ((1u64 << 48) - 1);
+            self.seed = new_seed;
+            (self.seed >> (48 - bits)) as u32
+        }
+
+        fn next_int_bounded(&mut self, bound: i32) -> i32 {
+            if bound <= 0 {
+                panic!("bound must be positive");
+            }
+
+            if (bound & -bound) == bound {
+                // Power of 2 - use bit masking
+                return ((bound as i64 * self.next(31) as i64) >> 31) as i32;
+            }
+
+            // Rejection sampling to avoid bias
+            let mut bits;
+            let mut val;
+            loop {
+                bits = self.next(31) as i32;
+                val = bits % bound;
+                if bits - val + (bound - 1) >= 0 {
+                    break;
+                }
+            }
+            val
+        }
+
+        pub fn next_i64(&mut self) -> i64 {
+            let high = self.next(32) as i32;
+            let low = self.next(32) as i32;
+            ((high as i64) << 32) + (low as i64)
+        }
+    }
 
     const TEST_NORMAL_PRECISION: i32 = HyperLogLogPlusPlus::DEFAULT_NORMAL_PRECISION; // 15
     const TEST_SPARSE_PRECISION: i32 =
@@ -360,6 +417,7 @@ mod tests {
             .sparse_precision(sparse_precision);
 
         let num_sketches = 100;
+        let mut random = JavaRand::new(123);
 
         let mut agg_state_protos: Vec<AggregatorStateProto> = Vec::new();
         let mut overall_aggregator = hll_builder
@@ -368,18 +426,19 @@ mod tests {
             .expect("Failed to build overall_aggregator");
 
         for _i in 0..num_sketches {
-            let num_values = (1 << normal_precision) / 2;
+            let max = (1 << normal_precision) / 2;
+            let num_values = random.next_int_bounded(max) + 1;
+
             let mut aggregator = hll_builder
                 .clone()
                 .build_for_u64()
                 .expect("Failed to build aggregator");
 
             for _k in 0..num_values {
-                //let value = random.random::<u64>();
-                let value = _k;
-                aggregator
-                    .add_u64(value)
-                    .expect(&format!("Failed to add value {value} to aggregator (i={_i}, k={_k})"));
+                let value = random.next_i64() as u64;
+                aggregator.add_u64(value).expect(&format!(
+                    "Failed to add value {value} to aggregator (i={_i}, k={_k})"
+                ));
                 overall_aggregator
                     .add_u64(value)
                     .expect("Failed to add value to overall_aggregator");
@@ -421,8 +480,6 @@ mod tests {
                 .expect("Failed to merge proto");
         }
 
-        // Comparing protos directly. This might be too strict if field order or exact byte values of data differ.
-        // Java test uses ProtoTruth with ignores. For now, direct comparison for compilation.
         assert_eq!(
             merged_aggregator
                 .serialize_to_proto()
