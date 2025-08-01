@@ -6,7 +6,7 @@ use std::collections::HashSet; // For the temporary buffer, Java uses IntOpenCus
 use itertools::Either;
 
 use crate::error::SketchError;
-use crate::hll::encoding;
+use crate::hll::encoding::{self, DedupeIterator};
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
@@ -91,8 +91,9 @@ impl SparseRepresentation {
             return Ok(());
         }
 
-        if let Some(iter) = self.deduped_iter() {
-            self.set(iter)?;
+        let iter = self.sorted_iter();
+        if let Some(iter) = iter {
+            self.set(DedupeIterator::new(iter, self.encoding))?;
         }
         Ok(())
     }
@@ -253,26 +254,6 @@ impl SparseRepresentation {
             (None, None) => None,
         }
     }
-
-    #[allow(clippy::type_complexity)]
-    fn deduped_iter(
-        &self,
-    ) -> Option<
-        Either<
-            MergedIntIterator<std::vec::IntoIter<u32>, impl Iterator<Item = u32>>,
-            Either<std::vec::IntoIter<u32>, impl Iterator<Item = u32>>,
-        >,
-    > {
-        let a = self.data_iterator();
-        let b = self.buffer_iterator();
-
-        match (a, b) {
-            (Some(a), Some(b)) => Some(Either::Left(MergedIntIterator::new(a.into_iter(), b))),
-            (Some(a), None) => Some(Either::Right(Either::Left(a.into_iter()))),
-            (None, Some(b)) => Some(Either::Right(Either::Right(b))),
-            (None, None) => None,
-        }
-    }
 }
 
 impl RepresentationOps for SparseRepresentation {
@@ -356,12 +337,12 @@ impl RepresentationOps for SparseRepresentation {
 
         // Special case when encodings are the same. Then we can profit from the fact that sparse_values
         // are sorted (as finged in the add_sparse_values contract) and do a merge-join.
-        let sorted: Vec<_> = match self.sorted_iter() {
-            Some(iter) => MergedIntIterator::new(iter, sparse_values.into_iter()).collect(),
-            None => sparse_values.into_iter().collect(),
+        let sorted = match self.sorted_iter() {
+            Some(iter) => Either::Left(MergedIntIterator::new(iter, sparse_values.into_iter())),
+            None => Either::Right(sparse_values.into_iter()),
         };
 
-        self.set(self.encoding.dedupe(sorted))?;
+        self.set(DedupeIterator::new(sorted, self.encoding))?;
         self.update_representation()
     }
 
@@ -560,18 +541,19 @@ mod tests {
         assert_eq!(final_state.precision, 10);
         assert_eq!(final_state.sparse_precision, 13);
 
-        // For now, we'll skip the detailed downgrade value check since encoding methods are not implemented
         // TODO: Implement downgrade_value and encoding_sparse methods
-        // let mut expected_downgraded_values = Vec::new();
-        // for &val in &sparse_values {
-        //     expected_downgraded_values
-        //         .push(source_encoding.downgrade_value(val, final_state.encoding_sparse()?)?);
-        // }
-        // expected_downgraded_values.sort_unstable(); // Stored sorted after dedupe
-        // assert_sparse_data_equals(
-        //     final_state.sparse_data.as_ref(),
-        //     &expected_downgraded_values,
-        // )?;
+        /*
+        let mut expected_downgraded_values = Vec::new();
+        for &val in &sparse_values {
+            expected_downgraded_values
+                 .push(source_encoding.downgrade_value(val, final_state.encoding_sparse()?)?);
+        }
+        expected_downgraded_values.sort_unstable(); // Stored sorted after dedupe
+        assert_sparse_data_equals(
+             final_state.sparse_data.as_ref(),
+             &expected_downgraded_values,
+        )?;
+        */
         Ok(())
     }
 
@@ -649,6 +631,4 @@ mod tests {
         );
         Ok(())
     }
-
-    // TODO: Test estimate, compact, merge_from_normal, merge_from_sparse more thoroughly.
 }

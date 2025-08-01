@@ -211,7 +211,8 @@ impl Aggregator<i64, HyperLogLogPlusPlus> for HyperLogLogPlusPlus {
         self.representation.state().num_values as u64
     }
 
-    fn serialize_to_bytes(&self) -> Result<Vec<u8>, SketchError> {
+    fn serialize_to_bytes(mut self) -> Result<Vec<u8>, SketchError> {
+        self.representation.compact()?;
         self.representation.state().to_byte_array()
     }
 
@@ -1227,5 +1228,19 @@ mod tests {
         assert_eq!(string_aggregator.num_values(), 1);
         assert_eq!(string_aggregator.normal_precision(), 18);
         assert_eq!(string_aggregator.sparse_precision(), 20);
+    }
+
+    #[test]
+    fn test_result() {
+        let mut aggregator = HyperLogLogPlusPlus::builder()
+            .build_for_u64()
+            .expect("Build failed");
+        for i in 0..=2188 {
+            aggregator.add_u64(i).unwrap();
+            aggregator.result().unwrap();
+        }
+        println!("result (2188): {}", aggregator.result().unwrap());
+        aggregator.add_u64(2189).unwrap();
+        println!("result (2189): {}", aggregator.result().unwrap());
     }
 }

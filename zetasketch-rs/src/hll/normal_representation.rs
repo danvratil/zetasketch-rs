@@ -874,6 +874,4 @@ mod tests {
         assert_eq!(target.state().data.as_deref().unwrap(), expected.as_slice());
         Ok(())
     }
-
-    // TODO: More tests might be needed, e.g. for estimate, compact (though compact is trivial for Normal).
 }

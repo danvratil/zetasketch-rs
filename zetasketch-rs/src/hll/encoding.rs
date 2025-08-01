@@ -1,6 +1,7 @@
 // Replicates com.google.zetasketch.internal.hllplus.Encoding.java
 
 use std::cmp::Ordering;
+use std::iter::Peekable;
 
 use crate::error::SketchError;
 
@@ -290,43 +291,8 @@ impl Sparse {
     /// 1 1010 010000
     /// 1 1110 000000
     /// ```
-    pub fn dedupe(&self, sorted_values: Vec<u32>) -> Vec<u32> {
-        let mut result = Vec::new();
-        let mut iter = sorted_values.into_iter().peekable();
-
-        while let Some(mut current) = iter.next() {
-            // Value is not rho-encoded so we don't need to do any special decoding as the value is
-            // the sparse index. Simply skip exact duplicates.
-            if (current & self.rho_encoded_flag) == 0 {
-                result.push(current);
-                while let Some(&next) = iter.peek() {
-                    if next != current {
-                        break;
-                    }
-                    iter.next();
-                }
-                continue;
-            }
-
-            // Keep consuming values until we encounter one with a different index or run out of
-            // values. We return the largest value (which will be the one with the largest rhoW).
-            let sparse_index = self.decode_sparse_index(current);
-            let mut max_sparse_value = current;
-
-            while let Some(&next) = iter.peek() {
-                if sparse_index != self.decode_sparse_index(next) {
-                    break;
-                }
-                current = iter
-                    .next()
-                    .expect("peek() returned Some but next() returned None");
-                max_sparse_value = current;
-            }
-
-            result.push(max_sparse_value);
-        }
-
-        result
+    pub fn dedupe<I: Iterator<Item = u32>>(&self, sorted_values: I) -> DedupeIterator<I> {
+        return DedupeIterator::new(sorted_values, *self);
     }
 
     pub fn downgrade<I: Iterator<Item = u32>>(&self, iter: I, target: &Sparse) -> Vec<u32> {
@@ -335,6 +301,59 @@ impl Sparse {
     }
 
     // TODO: `downgrade(sparse_value, target_sparse_encoding)` to re-encode for different sparse precision
+}
+
+#[derive(Debug)]
+pub struct DedupeIterator<I: Iterator<Item = u32>> {
+    iter: Peekable<I>,
+    encoding: Sparse,
+}
+
+impl<I: Iterator<Item = u32>> DedupeIterator<I> {
+    pub fn new(iter: I, encoding: Sparse) -> Self {
+        Self {
+            iter: iter.peekable(),
+            encoding,
+        }
+    }
+}
+
+impl<I: Iterator<Item = u32>> Iterator for DedupeIterator<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut current = self.iter.next()?;
+
+        // Value is not rho-encoded so we don't need to do any special decoding as the value is
+        // the sparse index. Simply skip exact duplicates.
+        if (current & self.encoding.rho_encoded_flag) == 0 {
+            while let Some(&next) = self.iter.peek() {
+                if next != current {
+                    break;
+                }
+                self.iter.next();
+            }
+            return Some(current);
+        }
+
+        // Keep consuming values until we encounter one with a different index or run out of
+        // values. We return the largest value (which will be the one with the largest rhoW).
+        let sparse_index = self.encoding.decode_sparse_index(current);
+        let mut max_sparse_value = current;
+
+        while let Some(&next) = self.iter.peek() {
+            if sparse_index != self.encoding.decode_sparse_index(next) {
+                break;
+            }
+            current = self
+                .iter
+                .next()
+                .expect("peek() returned Some but next() returned None");
+            max_sparse_value = current;
+        }
+
+        Some(max_sparse_value)
+    }
 }
 
 #[cfg(test)]
@@ -548,7 +567,7 @@ mod tests {
 
             let encoding = Sparse::new(4, 7).unwrap();
             assert_eq!(
-                encoding.dedupe(input),
+                encoding.dedupe(input.into_iter()).collect::<Vec<_>>(),
                 vec![
                     0b00000010100,
                     0b00001010100,
@@ -570,7 +589,10 @@ mod tests {
                 0b11010001100,
             ];
             let encoding = Sparse::new(4, 7).unwrap();
-            assert_eq!(encoding.dedupe(input), vec![0b00000010100, 0b11010001100,]);
+            assert_eq!(
+                encoding.dedupe(input.into_iter()).collect::<Vec<_>>(),
+                vec![0b00000010100, 0b11010001100,]
+            );
         }
 
         #[test]
