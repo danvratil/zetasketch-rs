@@ -49,11 +49,11 @@ impl VarInt {
             offset += 1;
 
             if v == 0 {
-                break
+                break;
             }
         }
 
-        return offset;
+        offset
     }
 }
 
@@ -70,6 +70,9 @@ mod tests {
     #[test]
     fn test_get_var_int() {
         assert_eq!(VarInt::get_var_int(&[0x00]), (0, 1));
-        assert_eq!(VarInt::get_var_int(&[0xff, 0xff, 0xff, 0xff, 0x07]), (i32::MAX, 5));
+        assert_eq!(
+            VarInt::get_var_int(&[0xff, 0xff, 0xff, 0xff, 0x07]),
+            (i32::MAX, 5)
+        );
     }
 }

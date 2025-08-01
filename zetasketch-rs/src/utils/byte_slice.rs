@@ -16,8 +16,7 @@ pub struct ByteSlice<'a> {
 
 impl<'a> ByteSlice<'a> {
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut v = Vec::with_capacity(capacity);
-        v.resize(capacity, 0);
+        let v = vec![0; capacity];
         Self {
             array: Cow::Owned(v),
             array_offset: 0,
@@ -37,7 +36,7 @@ impl<'a> ByteSlice<'a> {
 
     pub fn copy_on_write_with_offset_length(array: &'a [u8], offset: usize, length: usize) -> Self {
         Self {
-            array: Cow::Borrowed(&array),
+            array: Cow::Borrowed(array),
             array_offset: 0,
             limit: offset + length,
             position: offset,
@@ -271,9 +270,8 @@ mod tests {
 
     #[test]
     fn test_get_next_var_int() {
-        let mut v = [0;
-            VarInt::var_int_size(123) + VarInt::var_int_size(456) + VarInt::var_int_size(7890)
-        ];
+        let mut v =
+            [0; VarInt::var_int_size(123) + VarInt::var_int_size(456) + VarInt::var_int_size(7890)];
         let mut len = VarInt::set_var_int(123, v.as_mut_slice());
         len += VarInt::set_var_int(456, &mut (&mut v)[len..]);
         VarInt::set_var_int(7890, &mut (&mut v)[len..]);
@@ -373,7 +371,7 @@ mod tests {
         let mut slice = ByteSlice::with_capacity(10);
 
         let mut expected = [0; 10];
-        VarInt::set_var_int(1234,&mut expected.as_mut_slice()[1..]);
+        VarInt::set_var_int(1234, &mut expected.as_mut_slice()[1..]);
 
         slice.put_var_int(1, 1234);
         assert_eq!(slice.array(), expected);
@@ -413,7 +411,7 @@ mod tests {
         slice.put_next_var_int(1234);
         assert_eq!(data, [0; 5]);
         assert_eq!(
-            VarInt::get_var_int(&slice.array()),
+            VarInt::get_var_int(slice.array()),
             (1234, VarInt::var_int_size(1234))
         );
     }

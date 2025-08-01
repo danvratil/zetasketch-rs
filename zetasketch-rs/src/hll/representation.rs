@@ -161,11 +161,9 @@ impl Representation {
         match &self.repr {
             RepresentationUnion::Normal(n) => n.estimate(),
             RepresentationUnion::Sparse(s) => s.estimate(),
-            RepresentationUnion::Invalid => {
-                return Err(SketchError::InvalidState(
-                    "Representation is invalid".to_string(),
-                ))
-            }
+            RepresentationUnion::Invalid => Err(SketchError::InvalidState(
+                "Representation is invalid".to_string(),
+            )),
         }
     }
 

@@ -1,7 +1,4 @@
-use crate::protos::{
-    DefaultOpsTypeId,
-    CustomValueTypeId,
-};
+use crate::protos::{CustomValueTypeId, DefaultOpsTypeId};
 use protobuf::Enum;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,7 +42,6 @@ impl From<DefaultOpsTypeId> for ValueType {
     }
 }
 
-
 impl From<ValueType> for i32 {
     fn from(value: ValueType) -> i32 {
         match value {
@@ -56,9 +52,9 @@ impl From<ValueType> for i32 {
     }
 }
 
-impl Into<DefaultOpsTypeId> for ValueType {
-    fn into(self) -> DefaultOpsTypeId {
-        match self {
+impl From<ValueType> for DefaultOpsTypeId {
+    fn from(val: ValueType) -> Self {
+        match val {
             ValueType::Unknown => DefaultOpsTypeId::UNKNOWN,
             ValueType::DefaultOpsType(id) => id,
             ValueType::CustomType(_) => panic!("Cannot convert custom type to DefaultOpsTypeId"),
@@ -73,15 +69,21 @@ mod tests {
     #[test]
     pub fn test_unknown() {
         assert_eq!(i32::from(ValueType::Unknown), 0);
-        assert_eq!(Into::<i32>::into(ValueType::Unknown), DefaultOpsTypeId::UNKNOWN.value());
+        assert_eq!(
+            Into::<i32>::into(ValueType::Unknown),
+            DefaultOpsTypeId::UNKNOWN.value()
+        );
         assert_eq!(ValueType::from(0), ValueType::Unknown);
     }
 
     #[test]
     pub fn test_from_default_ops_type_number() {
         let value_type = ValueType::from(DefaultOpsTypeId::INT32);
-        assert!(matches!(value_type, ValueType::DefaultOpsType(DefaultOpsTypeId::INT32)));
-        assert_eq!(i32::from(value_type), DefaultOpsTypeId::INT32.value()   );
+        assert!(matches!(
+            value_type,
+            ValueType::DefaultOpsType(DefaultOpsTypeId::INT32)
+        ));
+        assert_eq!(i32::from(value_type), DefaultOpsTypeId::INT32.value());
     }
 
     #[test]

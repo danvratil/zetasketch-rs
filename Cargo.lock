@@ -634,6 +634,7 @@ dependencies = [
  "bytes",
  "itertools 0.14.0",
  "log",
+ "once_cell",
  "ordered-float",
  "prost",
  "prost-build",

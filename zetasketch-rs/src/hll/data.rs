@@ -1,8 +1,9 @@
 // Contains constants and lookup tables for bias correction and LinearCounting thresholds.
 // Replicates com.google.zetasketch.internal.hllplus.Data.java
 
+use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
-use std::{cell::LazyCell, cmp::Ordering};
+use std::cmp::Ordering;
 
 // Smallest precision for which thresholds and bias corrections are precisely defined.
 pub const MINIMUM_PRECISION: i32 = 10;
@@ -13,7 +14,7 @@ pub const MAXIMUM_PRECISION: i32 = 18;
 const NUMBER_OF_NEIGHBORS_IN_KNN: usize = 6;
 
 // Means of the bias corrections.
-const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
+static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
     [
         // prec 10
         vec![
@@ -44,7 +45,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             4906.9544, 4935.3516, 4954.3532, 4984.0248, 5011.217, 5035.3258, 5057.3672, 5084.1828,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 11
         vec![
@@ -76,7 +77,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             10177.5244, 10229.9176,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 12
         vec![
@@ -109,7 +110,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             19854.0692, 19965.1224, 20065.1774, 20158.2212, 20253.353, 20366.3264, 20463.22,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 13
         vec![
@@ -143,7 +144,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             39492.8566, 39684.8628, 39898.4108, 40093.1836, 40297.6858, 40489.7086, 40717.2424,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 14
         vec![
@@ -178,7 +179,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             80238.701, 80646.891, 81035.6436, 81460.0448, 81876.3884,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 15
         vec![
@@ -385,7 +386,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             163729.2842,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 16
         vec![
@@ -591,7 +592,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             325847.1542,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 17
         vec![
@@ -798,7 +799,7 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             654941.845,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
         // prec 18
         vec![
@@ -1004,13 +1005,13 @@ const MEAN_DATA: LazyCell<[Vec<OrderedFloat<f64>>; 9]> = LazyCell::new(|| {
             1303455.691,
         ]
         .into_iter()
-        .map(|x| OrderedFloat(x))
+        .map(OrderedFloat)
         .collect::<Vec<_>>(),
     ]
 });
 
 // Biases of the raw estimates.
-const BIAS_DATA: LazyCell<[Vec<f64>; 9]> = LazyCell::new(|| {
+static BIAS_DATA: Lazy<[Vec<f64>; 9]> = Lazy::new(|| {
     [
         // prec 10
         vec![
@@ -2870,11 +2871,11 @@ pub fn estimate_bias(estimate: f64, precision: i32) -> f64 {
         sum += bias.bias / bias.distance;
     }
 
-    return sum / total_weight;
+    sum / total_weight
 }
 
 fn closest_bias(estimate: f64, precision: i32) -> Vec<WeightedBias> {
-    if precision < MINIMUM_PRECISION || precision > MAXIMUM_PRECISION {
+    if !(MINIMUM_PRECISION..=MAXIMUM_PRECISION).contains(&precision) {
         return vec![];
     }
 
@@ -2890,11 +2891,7 @@ fn closest_bias(estimate: f64, precision: i32) -> Vec<WeightedBias> {
         Err(idx) => idx + 1, // TODO(port): drop the +1?
     };
 
-    let bottom = if index < NUMBER_OF_NEIGHBORS_IN_KNN {
-        0
-    } else {
-        index - NUMBER_OF_NEIGHBORS_IN_KNN
-    };
+    let bottom = index.saturating_sub(NUMBER_OF_NEIGHBORS_IN_KNN);
     let top = if index > means.len() - NUMBER_OF_NEIGHBORS_IN_KNN {
         means.len()
     } else {
@@ -2933,7 +2930,7 @@ impl Eq for WeightedBias {}
 
 impl PartialOrd for WeightedBias {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.distance.partial_cmp(&other.distance)
+        Some(self.cmp(other))
     }
 }
 
@@ -2957,11 +2954,11 @@ const LINEAR_COUNTING_THRESHOLD: [i32; 9] = [
 
 /// Returns the estimate threshold below which LinearCounting is preferred.
 pub fn linear_counting_threshold(precision: i32) -> i32 {
-    if precision >= MINIMUM_PRECISION && precision <= MAXIMUM_PRECISION {
+    if (MINIMUM_PRECISION..=MAXIMUM_PRECISION).contains(&precision) {
         return LINEAR_COUNTING_THRESHOLD[(precision - MINIMUM_PRECISION) as usize];
     }
 
-    return 5 * (1 << precision) / 2;
+    5 * (1 << precision) / 2
 }
 
 #[cfg(test)]

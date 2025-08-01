@@ -72,14 +72,14 @@ impl State {
 
     pub fn has_data(&self) -> bool {
         match &self.data {
-            Some(data) => data.len() > 0,
+            Some(data) => !data.is_empty(),
             None => false,
         }
     }
 
     pub fn has_sparse_data(&self) -> bool {
         match &self.sparse_data {
-            Some(data) => data.len() > 0,
+            Some(data) => !data.is_empty(),
             None => false,
         }
     }
@@ -90,50 +90,46 @@ impl State {
     ) -> Result<HyperLogLogPlusUniqueStateProto, SketchError> {
         let limit = stream.pos() + size as u64;
         let mut hll = HyperLogLogPlusUniqueStateProto::default();
-        while stream.pos() < limit
-            && !stream
-                .eof()
-                .map_err(|e| SketchError::ProtoDeserialization(e))?
-        {
+        while stream.pos() < limit && !stream.eof().map_err(SketchError::ProtoDeserialization)? {
             match stream.read_raw_tag_or_eof() {
                 Ok(Some(Self::SPARSE_SIZE_TAG)) => {
                     hll.sparse_size = Some(
                         stream
                             .read_int32()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::PRECISION_OR_NUM_BUCKETS_TAG)) => {
                     hll.precision_or_num_buckets = Some(
                         stream
                             .read_int32()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::SPARSE_PRECISION_OR_NUM_BUCKETS_TAG)) => {
                     hll.sparse_precision_or_num_buckets = Some(
                         stream
                             .read_int32()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::DATA_TAG)) => {
                     hll.data = Some(
                         stream
                             .read_bytes()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::SPARSE_DATA_TAG)) => {
                     hll.sparse_data = Some(
                         stream
                             .read_bytes()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(tag)) => {
                     protobuf::rt::skip_field_for_tag(tag, stream)
-                        .map_err(|e| SketchError::ProtoDeserialization(e))?;
+                        .map_err(SketchError::ProtoDeserialization)?;
                 }
                 Ok(None) => break, // EOF
                 Err(e) => {
@@ -159,39 +155,39 @@ impl State {
                     state.type_ = Some(
                         stream
                             .read_enum_or_unknown::<AggregatorType>()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::NUM_VALUES_TAG)) => {
                     state.num_values = Some(
                         stream
                             .read_int64()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::ENCODING_VERSION_TAG)) => {
                     state.encoding_version = Some(
                         stream
                             .read_int32()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     );
                 }
                 Ok(Some(Self::VALUE_TYPE_TAG)) => {
                     state.value_type = Some(
                         stream
                             .read_int32()
-                            .map_err(|e| SketchError::ProtoDeserialization(e))?,
+                            .map_err(SketchError::ProtoDeserialization)?,
                     )
                 }
                 Ok(Some(Self::HYPERLOGLOGPLUS_UNIQUE_STATE_TAG)) => {
                     let size = stream
                         .read_int32()
-                        .map_err(|e| SketchError::ProtoDeserialization(e))?;
+                        .map_err(SketchError::ProtoDeserialization)?;
                     hll = Some(Self::parse_hll(&mut stream, size)?);
                 }
                 Ok(Some(tag)) => {
                     protobuf::rt::skip_field_for_tag(tag, &mut stream)
-                        .map_err(|e| SketchError::ProtoDeserialization(e))?;
+                        .map_err(SketchError::ProtoDeserialization)?;
                 }
                 Ok(None) => break, // EOF
                 Err(e) => {
@@ -204,8 +200,7 @@ impl State {
             r#type: state.type_(),
             num_values: state.num_values(),
             encoding_version: state.encoding_version(),
-            value_type: ValueType::try_from(state.value_type())
-                .map_err(|_| SketchError::InvalidState("Invalid value type".to_string()))?,
+            value_type: ValueType::from(state.value_type()),
             sparse_size: hll
                 .as_ref()
                 .map(|hll| hll.sparse_size())
@@ -244,12 +239,12 @@ impl State {
 
             if let Some(data) = &state.data {
                 stream.write_uint32_no_tag(State::DATA_TAG)?;
-                stream.write_bytes_no_tag(&data)?;
+                stream.write_bytes_no_tag(data)?;
             }
 
             if let Some(data) = &state.sparse_data {
                 stream.write_uint32_no_tag(State::SPARSE_DATA_TAG)?;
-                stream.write_bytes_no_tag(&data)?;
+                stream.write_bytes_no_tag(data)?;
             }
 
             stream.flush()?;
@@ -276,7 +271,7 @@ impl State {
             }
 
             let mut hll_buffer = Vec::new();
-            write_hll_to_buffer(&state, &mut hll_buffer)?;
+            write_hll_to_buffer(state, &mut hll_buffer)?;
             stream.write_uint32_no_tag(State::HYPERLOGLOGPLUS_UNIQUE_STATE_TAG)?;
             stream.write_uint32_no_tag(hll_buffer.len() as u32)?;
             stream.write_raw_bytes(&hll_buffer)?;
@@ -287,7 +282,7 @@ impl State {
         }
 
         let mut buffer = Vec::new();
-        write_to_buffer(self, &mut buffer).map_err(|e| SketchError::ProtoSerialization(e))?;
+        write_to_buffer(self, &mut buffer).map_err(SketchError::ProtoSerialization)?;
         Ok(buffer)
     }
 }
@@ -322,9 +317,15 @@ mod tests {
         {
             let aggr_proto = aggregator_state_proto();
             let mut stream = CodedOutputStream::vec(&mut buf);
-            aggr_proto.write_to(&mut stream).expect("Failed to serialize input message");
-            stream.write_uint32_no_tag(State::HYPERLOGLOGPLUS_UNIQUE_STATE_TAG).expect("Failed to write tag");
-            stream.write_message_no_tag(proto).expect("Failed to serialize input message");
+            aggr_proto
+                .write_to(&mut stream)
+                .expect("Failed to serialize input message");
+            stream
+                .write_uint32_no_tag(State::HYPERLOGLOGPLUS_UNIQUE_STATE_TAG)
+                .expect("Failed to write tag");
+            stream
+                .write_message_no_tag(proto)
+                .expect("Failed to serialize input message");
             stream.flush().expect("Failed to flush stream");
         }
 
@@ -338,8 +339,11 @@ mod tests {
 
     fn to_hll_proto(state: &State) -> HyperLogLogPlusUniqueStateProto {
         let buf = state.to_byte_array().expect("Failed to serialize state");
-        let proto = AggregatorStateProto::parse_from_bytes(&buf).expect("Failed to parse input message");
-        exts::hyperloglogplus_unique_state.get(&proto).unwrap_or_default()
+        let proto =
+            AggregatorStateProto::parse_from_bytes(&buf).expect("Failed to parse input message");
+        exts::hyperloglogplus_unique_state
+            .get(&proto)
+            .unwrap_or_default()
     }
 
     #[test]
@@ -392,7 +396,10 @@ mod tests {
         let mut proto = aggregator_state_proto();
 
         let state = parse(&proto);
-        assert_eq!(state.encoding_version, 1, "Default encoding version should be 1");
+        assert_eq!(
+            state.encoding_version, 1,
+            "Default encoding version should be 1"
+        );
 
         proto.set_encoding_version(0);
         let state = parse(&proto);
@@ -426,7 +433,9 @@ mod tests {
             proto.set_value_type(enum_value.value());
 
             let state = parse(&proto);
-            let value_type = enum_value.cast::<DefaultOpsTypeId>().expect("Failed to cast enum value");
+            let value_type = enum_value
+                .cast::<DefaultOpsTypeId>()
+                .expect("Failed to cast enum value");
             assert_eq!(state.value_type, ValueType::from(value_type.value()));
         }
     }
@@ -438,7 +447,9 @@ mod tests {
             proto.set_value_type(enum_value.value());
 
             let state = parse(&proto);
-            let value_type = enum_value.cast::<CustomValueTypeId>().expect("Failed to cast enum value");
+            let value_type = enum_value
+                .cast::<CustomValueTypeId>()
+                .expect("Failed to cast enum value");
             assert_eq!(state.value_type, ValueType::from(value_type.value()));
         }
     }
@@ -501,7 +512,7 @@ mod tests {
         let state = parse_hll(&proto);
         assert_eq!(state.precision, i32::MAX);
     }
-    
+
     #[test]
     fn test_parse_sparse_precision() {
         let mut proto = HyperLogLogPlusUniqueStateProto::default();
@@ -566,11 +577,21 @@ mod tests {
         let mut buf = Vec::new();
         {
             let mut stream = CodedOutputStream::vec(&mut buf);
-            stream.write_uint32_no_tag(State::NUM_VALUES_TAG).expect("Failed to write tag");
-            stream.write_int32_no_tag(42).expect("Failed to write int32");
-            stream.write_string(999, "foobar").expect("Failed to write string");
-            stream.write_uint32_no_tag(State::ENCODING_VERSION_TAG).expect("Failed to write tag");
-            stream.write_int32_no_tag(43).expect("Failed to write int32");
+            stream
+                .write_uint32_no_tag(State::NUM_VALUES_TAG)
+                .expect("Failed to write tag");
+            stream
+                .write_int32_no_tag(42)
+                .expect("Failed to write int32");
+            stream
+                .write_string(999, "foobar")
+                .expect("Failed to write string");
+            stream
+                .write_uint32_no_tag(State::ENCODING_VERSION_TAG)
+                .expect("Failed to write tag");
+            stream
+                .write_int32_no_tag(43)
+                .expect("Failed to write int32");
             stream.flush().expect("Failed to flush stream");
         }
 
@@ -579,7 +600,7 @@ mod tests {
         assert_eq!(state.num_values, 42);
         assert_eq!(state.encoding_version, 43);
     }
-    
+
     #[test]
     fn test_serialize_type() {
         let mut state = State::default();
@@ -589,10 +610,17 @@ mod tests {
         assert_eq!(actual.type_(), AggregatorType::HYPERLOGLOG_PLUS_UNIQUE);
 
         for enum_value in AggregatorType::enum_descriptor().values() {
-            state.r#type = enum_value.cast::<AggregatorType>().expect("Failed to cast enum value");
+            state.r#type = enum_value
+                .cast::<AggregatorType>()
+                .expect("Failed to cast enum value");
             let actual = to_proto(&state);
             assert!(actual.has_type());
-            assert_eq!(actual.type_(), enum_value.cast::<AggregatorType>().expect("Failed to cast enum value"));
+            assert_eq!(
+                actual.type_(),
+                enum_value
+                    .cast::<AggregatorType>()
+                    .expect("Failed to cast enum value")
+            );
         }
     }
 
@@ -609,7 +637,7 @@ mod tests {
         assert!(actual.has_num_values());
         assert_eq!(actual.num_values(), 42);
     }
-    
+
     #[test]
     fn test_serialize_encoding_version() {
         let mut state = State::default();
@@ -622,16 +650,20 @@ mod tests {
         assert!(actual.has_encoding_version());
         assert_eq!(actual.encoding_version(), 2);
     }
-    
+
     #[test]
     fn test_serialize_value_type() {
         let mut state = State::default();
 
         let actual = to_proto(&state);
         assert!(!actual.has_value_type());
-        
+
         for enum_value in DefaultOpsTypeId::enum_descriptor().values() {
-            let value_type = ValueType::DefaultOpsType(enum_value.cast::<DefaultOpsTypeId>().expect("Failed to cast enum value"));
+            let value_type = ValueType::DefaultOpsType(
+                enum_value
+                    .cast::<DefaultOpsTypeId>()
+                    .expect("Failed to cast enum value"),
+            );
             state.value_type = value_type;
             let actual = to_proto(&state);
             if value_type == ValueType::Unknown {
@@ -660,7 +692,7 @@ mod tests {
 
         let proto = to_hll_proto(&state);
         assert!(!proto.has_precision_or_num_buckets());
-        
+
         state.precision = 42;
         let proto = to_hll_proto(&state);
         assert!(proto.has_precision_or_num_buckets());
@@ -673,7 +705,7 @@ mod tests {
 
         let proto = to_hll_proto(&state);
         assert!(!proto.has_sparse_precision_or_num_buckets());
-        
+
         state.sparse_precision = 42;
         let proto = to_hll_proto(&state);
         assert!(proto.has_sparse_precision_or_num_buckets());
@@ -697,7 +729,7 @@ mod tests {
             UnknownValueRef::LengthDelimited(data) => {
                 let h = HyperLogLogPlusUniqueStateProto::parse_from_bytes(data).unwrap();
                 assert!(h.has_data());
-            },
+            }
             _ => panic!("Wrong field type"),
         };
         let proto = to_hll_proto(&state);
@@ -717,5 +749,4 @@ mod tests {
         assert!(proto.has_sparse_data());
         assert_eq!(proto.sparse_data(), vec![1, 2, 3]);
     }
-    
 }

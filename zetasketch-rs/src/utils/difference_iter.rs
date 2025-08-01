@@ -123,7 +123,7 @@ mod tests {
         #[test]
         fn next_throws_when_empty() {
             let mut iter = DifferenceDecoder::new(SimpleVarIntReader::new(&[]));
-            assert!(matches!(iter.next(), None));
+            assert!(iter.next().is_none());
         }
     }
 

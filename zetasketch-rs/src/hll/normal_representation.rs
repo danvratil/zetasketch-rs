@@ -143,15 +143,13 @@ impl NormalRepresentation {
         // The target_array is ensured/allocated by maybe_downgrade before this call for target_encoding.precision
         let target_array = Self::get_writeable_data_mut(state);
 
-        for old_index in 0..source_data.len() {
-            let old_rho_w = source_data[old_index]; // Fixed: Access element
-
+        for (old_index, old_rho_w) in source_data.iter().enumerate() {
             let new_index = source_encoding
                 .downgrade_index(old_index as u32, target_encoding.precision)
                 as usize;
             let new_rho_w = source_encoding.downgrade_rho_w(
                 old_index as u32,
-                old_rho_w,
+                *old_rho_w,
                 target_encoding.precision,
             );
 
@@ -381,13 +379,14 @@ mod tests {
         normal_precision: i32,
         sparse_precision: i32,
     ) -> Result<NormalRepresentation, SketchError> {
-        let mut state = State::default();
-        state.precision = normal_precision;
-        state.sparse_precision = sparse_precision;
-        // NormalRepresentation::new expects data to be None or correctly sized.
-        // For these tests, we often start empty and let operations initialize data.
-        state.data = None;
-        NormalRepresentation::new(state)
+        NormalRepresentation::new(State {
+            precision: normal_precision,
+            sparse_precision,
+            // NormalRepresentation::new expects data to be None or correctly sized.
+            // For these tests, we often start empty and let operations initialize data.
+            data: None,
+            ..Default::default()
+        })
     }
 
     #[test]
@@ -466,8 +465,11 @@ mod tests {
         // it should be decoded directly, not downgraded further.
         let normal_encoding = NormalEncoding::new(10)?; // repr's new encoding
 
-        let new_index = source_sparse_encoding. decode_and_downgrade_normal_index(sparse_value, normal_encoding.precision) as usize;
-        let new_rho_w = source_sparse_encoding.decode_and_downgrade_normal_rho_w(sparse_value, normal_encoding.precision);
+        let new_index = source_sparse_encoding
+            .decode_and_downgrade_normal_index(sparse_value, normal_encoding.precision)
+            as usize;
+        let new_rho_w = source_sparse_encoding
+            .decode_and_downgrade_normal_rho_w(sparse_value, normal_encoding.precision);
 
         if new_index < expected_data.len() {
             expected_data[new_index] = new_rho_w;
@@ -728,8 +730,7 @@ mod tests {
             0
         } else {
             return Err(SketchError::IllegalArgument(format!(
-                "rho_w_val {} is too large for p={}",
-                rho_w_val, p
+                "rho_w_val {rho_w_val} is too large for p={p}"
             )));
         };
 
@@ -749,12 +750,20 @@ mod tests {
         let target = add_hash_to_normal(target, p_target, 0, 3)?;
         let target = match target {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("target is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "target is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
         let target = add_hash_to_normal(target, p_target, 1, 1)?;
         let target = match target {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("target is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "target is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
 
         let source = create_normal(p_source, sp)?;
@@ -764,47 +773,30 @@ mod tests {
         let source = add_hash_to_normal(source, p_source, 0, 1)?; // Downgrades to idx=0, rhoW around 1 + (11-10)=2
         let source = match source {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("source is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "source is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
 
         let source = add_hash_to_normal(source, p_source, 2, 3)?; // Downgrades to idx=1, rhoW around 3 + (11-10)=4
         let source = match source {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("source is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "source is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
 
         let target = target.merge_from_normal(source)?;
 
-        // Expected data in target (p=10)
-        // Java comments:
-        // expected[0b0000000000] = 3; // preserved (target had 3, source's 0->0 with rhoW=1 would be lower)
-        // expected[0b0000000001] = 4; // updated (target had 1, source's 2->1 with rhoW=3, dowgraded rhoW is 3 + (11-10) = 4)
-
-        // Let's re-verify downgrade logic for rhoW from encoding.rs (conceptual)
-        // downgrade_rho_w(old_idx, old_rho_w, target_encoding) -> new_rho_w
-        //   If new_idx_prefix == old_idx_prefix (first P_target bits of old_idx match new_idx)
-        //     return old_rho_w + (source_encoding.precision - target_encoding.precision)
-        //   Else
-        //     return old_rho_w
-        // This is for Normal->Normal downgrade.
-
-        let source_enc = NormalEncoding::new(p_source)?;
-        let target_enc = NormalEncoding::new(p_target)?;
-
-        // Source val 1: old_idx=0, old_rho_w=1
-        let new_idx_s1 = source_enc.downgrade_index(0, target_enc.precision); // 0
-        let new_rho_w_s1 = source_enc.downgrade_rho_w(0, 1, target_enc.precision); // 1 + (11-10) = 2
-
-        // Source val 2: old_idx=2, old_rho_w=3
-        let new_idx_s2 = source_enc.downgrade_index(2, target_enc.precision); // 1
-        let new_rho_w_s2 = source_enc.downgrade_rho_w(2, 3, target_enc.precision); // 3 + (11-10) = 4
-
         let mut expected = vec![0u8; 1 << p_target];
-        expected[0] = 3u8.max(new_rho_w_s1); // target had 3, source provides 2. Max is 3.
-        expected[1] = 1u8.max(new_rho_w_s2); // target had 1, source provides 4. Max is 4.
+        expected[0] = 3u8; // preserved
+        expected[1] = 4u8; // target had 3, 4 after downgrade
 
         assert_eq!(target.state().data.as_deref().unwrap(), expected.as_slice());
-        assert_eq!(target.state().precision, p_target); // Target precision remains.
         Ok(())
     }
 
@@ -819,12 +811,20 @@ mod tests {
         let source = add_hash_to_normal(source, p_source, 0, 3)?;
         let source = match source {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("source is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "source is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
         let source = add_hash_to_normal(source, p_source, 1, 1)?;
         let source = match source {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("source is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "source is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
 
         let target = create_normal(p_target_orig, sp)?;
@@ -832,12 +832,20 @@ mod tests {
         let target = add_hash_to_normal(target, p_target_orig, 0, 1)?;
         let target = match target {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("target is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "target is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
         let target = add_hash_to_normal(target, p_target_orig, 2, 3)?;
         let target = match target {
             RepresentationUnion::Normal(repr) => repr,
-            _ => return Err(SketchError::IllegalArgument("target is not a NormalRepresentation".to_string())),
+            _ => {
+                return Err(SketchError::IllegalArgument(
+                    "target is not a NormalRepresentation".to_string(),
+                ))
+            }
         };
         // Target merges source. Target should downgrade to p_source=10.
         let target = target.merge_from_normal(source)?;

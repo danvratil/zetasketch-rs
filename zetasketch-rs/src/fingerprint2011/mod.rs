@@ -28,8 +28,8 @@ fn load_64_safely(bytes: &[u8]) -> i64 {
     let mut result: i64 = 0;
 
     let limit = bytes.len().min(8);
-    for i in 0..limit {
-        result |= ((bytes[i] as i64) & 0xFF) << (i * 8)
+    for (i, b) in bytes.iter().enumerate().take(limit) {
+        result |= ((*b as i64) & 0xFF) << (i * 8)
     }
 
     result
@@ -51,11 +51,11 @@ pub fn fingerprint(bytes: &[u8]) -> i64 {
         K0
     };
     let result = hash_128_to_64(result.wrapping_add(v), u);
-    return if result == 0 || result == 1 {
+    if result == 0 || result == 1 {
         result + !1
     } else {
         result
-    };
+    }
 }
 
 fn shift_mix(val: i64) -> i64 {
@@ -127,9 +127,7 @@ fn full_fingerprint(bytes: &[u8]) -> i64 {
             x.wrapping_add(w[0]),
         );
         w = weak_hash_length_32_with_seed(&bytes[offset + 32..], z.wrapping_add(w[1]), y);
-        let tmp = z;
-        z = x;
-        x = tmp;
+        std::mem::swap(&mut z, &mut x);
         offset += 64;
         length -= 64;
 
@@ -137,12 +135,12 @@ fn full_fingerprint(bytes: &[u8]) -> i64 {
             break;
         }
     }
-    return hash_128_to_64(
+    hash_128_to_64(
         hash_128_to_64(v[0], w[0])
             .wrapping_add(shift_mix(y).wrapping_mul(K1))
             .wrapping_add(z),
         hash_128_to_64(v[1], w[1]).wrapping_add(x),
-    );
+    )
 }
 
 fn hash_length_33_to_64(bytes: &[u8]) -> i64 {
@@ -171,7 +169,7 @@ fn hash_length_33_to_64(bytes: &[u8]) -> i64 {
             .wrapping_mul(K2)
             .wrapping_add((wf.wrapping_add(vs)).wrapping_mul(K0)),
     );
-    return shift_mix(r.wrapping_mul(K0).wrapping_add(vs)).wrapping_mul(K2);
+    shift_mix(r.wrapping_mul(K0).wrapping_add(vs)).wrapping_mul(K2)
 }
 
 fn murmur_hash64_with_seed(bytes: &[u8], seed: i64) -> i64 {
@@ -199,9 +197,8 @@ fn murmur_hash64_with_seed(bytes: &[u8], seed: i64) -> i64 {
 
     hash = shift_mix(hash).wrapping_mul(mul);
     hash = shift_mix(hash);
-    return hash;
+    hash
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -287,10 +284,10 @@ mod tests {
             buf[buf_len] = get_char(h);
             buf_len += 1;
 
-            let x0: i32 = (buf[buf_len - 1] & 0xff) as i32;
-            let x1: i32 = (buf[buf_len - 2] & 0xff) as i32;
-            let x2: i32 = (buf[buf_len - 3] & 0xff) as i32;
-            let x3: i32 = (buf[buf_len / 2] & 0xff) as i32;
+            let x0: i32 = buf[buf_len - 1] as i32;
+            let x1: i32 = buf[buf_len - 2] as i32;
+            let x2: i32 = buf[buf_len - 3] as i32;
+            let x3: i32 = buf[buf_len / 2] as i32;
             buf[(((x0 << 16) + (x1 << 8) + x2) % buf_len as i32) as usize] ^= x3 as u8;
             buf[(((x1 << 16) + (x2 << 8) + x3) % buf_len as i32) as usize] ^=
                 ((i as i32) % 256) as u8;

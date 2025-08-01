@@ -39,8 +39,7 @@ impl Normal {
     pub fn new(precision: i32) -> Result<Self, SketchError> {
         if !(1..=63).contains(&precision) {
             return Err(SketchError::IllegalArgument(format!(
-                "Normal precision must be between 1 and 63, got {}",
-                precision
+                "Normal precision must be between 1 and 63, got {precision}"
             )));
         }
         Ok(Self { precision })
@@ -90,19 +89,20 @@ pub struct Sparse {
 
 impl PartialEq for Sparse {
     fn eq(&self, other: &Self) -> bool {
-        return self.normal_precision == other.normal_precision
-            && self.sparse_precision == other.sparse_precision;
+        self.normal_precision == other.normal_precision
+            && self.sparse_precision == other.sparse_precision
     }
 }
 
 impl PartialOrd for Sparse {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.normal_precision < other.normal_precision
-            || self.sparse_precision < other.sparse_precision {
-                return Some(Ordering::Less);
+            || self.sparse_precision < other.sparse_precision
+        {
+            return Some(Ordering::Less);
         }
 
-        return None
+        None
     }
 }
 
@@ -113,20 +113,17 @@ impl Sparse {
     pub fn new(normal_precision: i32, sparse_precision: i32) -> Result<Self, SketchError> {
         if !((1..=24).contains(&normal_precision)) {
             return Err(SketchError::IllegalArgument(format!(
-                "Sparse mode: normal precision must be 1-24, got {}",
-                normal_precision
+                "Sparse mode: normal precision must be 1-24, got {normal_precision}"
             )));
         }
         if !((1..=30).contains(&sparse_precision)) {
             return Err(SketchError::IllegalArgument(format!(
-                "Sparse mode: sparse precision must be 1-30, got {}",
-                sparse_precision
+                "Sparse mode: sparse precision must be 1-30, got {sparse_precision}"
             )));
         }
         if sparse_precision < normal_precision {
             return Err(SketchError::IllegalArgument(format!(
-                "Sparse precision ({}) must be >= normal precision ({})",
-                sparse_precision, normal_precision
+                "Sparse precision ({sparse_precision}) must be >= normal precision ({normal_precision})"
             )));
         }
 
@@ -146,24 +143,28 @@ impl Sparse {
         if ((self.normal_precision <= other.normal_precision)
             && (self.sparse_precision <= other.sparse_precision))
             || ((self.normal_precision >= other.normal_precision)
-                && (self.sparse_precision >= other.sparse_precision)) {
+                && (self.sparse_precision >= other.sparse_precision))
+        {
             return;
         }
-        assert!(false, "Precisions (p={}, sp={}) and (p={}, sp={}) are not compatible",
-            self.normal_precision, self.sparse_precision,
-            other.normal_precision, other.sparse_precision
+        panic!(
+            "Precisions (p={}, sp={}) and (p={}, sp={}) are not compatible",
+            self.normal_precision,
+            self.sparse_precision,
+            other.normal_precision,
+            other.sparse_precision
         );
     }
 
     #[cfg(test)]
     pub fn is_less_than(&self, other: &Self) -> bool {
-        return self.normal_precision < other.normal_precision
-            || self.sparse_precision < other.sparse_precision;
+        self.normal_precision < other.normal_precision
+            || self.sparse_precision < other.sparse_precision
     }
 
     pub fn encode(&self, hash: u64) -> u32 {
         let sparse_index = (hash >> (64 - self.sparse_precision)) as u32;
-        let sparse_rho_w = compute_rho_w(hash,  64 - self.sparse_precision);
+        let sparse_rho_w = compute_rho_w(hash, 64 - self.sparse_precision);
 
         self.encode_parts(sparse_index, sparse_rho_w)
     }
@@ -212,7 +213,10 @@ impl Sparse {
 
     pub fn decode_normal_rho_w(&self, sparse_value: u32) -> u8 {
         if (sparse_value & self.rho_encoded_flag) == 0 {
-            compute_rho_w(sparse_value.into(), self.sparse_precision - self.normal_precision)
+            compute_rho_w(
+                sparse_value.into(),
+                self.sparse_precision - self.normal_precision,
+            )
         } else {
             // Rho-encoded. Normal rhoW is sparse_rho_w' + (sp - p)
             ((sparse_value & RHOW_MASK) as i32 + (self.sparse_precision - self.normal_precision))
@@ -248,7 +252,8 @@ impl Sparse {
         let old_sparse_index = self.decode_sparse_index(sparse_value);
         let old_sparse_rho_w = self.decode_sparse_rho_w_if_present(sparse_value);
 
-        let new_sparse_index = old_sparse_index >> (self.sparse_precision - target.sparse_precision);
+        let new_sparse_index =
+            old_sparse_index >> (self.sparse_precision - target.sparse_precision);
         let new_sparse_rho_w = downgrade_rho_w(
             old_sparse_index,
             old_sparse_rho_w,
@@ -256,11 +261,11 @@ impl Sparse {
             target.sparse_precision,
         );
 
-       target.encode_parts(new_sparse_index, new_sparse_rho_w)
+        target.encode_parts(new_sparse_index, new_sparse_rho_w)
     }
 
     pub fn normal(&self) -> Normal {
-        return self.normal_encoder;
+        self.normal_encoder
     }
 
     /// Takes a sorted vector of sparse values and returns a vector with deduplicated indices,
@@ -312,7 +317,9 @@ impl Sparse {
                 if sparse_index != self.decode_sparse_index(next) {
                     break;
                 }
-                current = iter.next().expect("peek() returned Some but next() returned None");
+                current = iter
+                    .next()
+                    .expect("peek() returned Some but next() returned None");
                 max_sparse_value = current;
             }
 
@@ -323,7 +330,8 @@ impl Sparse {
     }
 
     pub fn downgrade<I: Iterator<Item = u32>>(&self, iter: I, target: &Sparse) -> Vec<u32> {
-        iter.map(|val| self.downgrade_sparse_value(val, target)).collect()
+        iter.map(|val| self.downgrade_sparse_value(val, target))
+            .collect()
     }
 
     // TODO: `downgrade(sparse_value, target_sparse_encoding)` to re-encode for different sparse precision
@@ -660,13 +668,23 @@ mod tests {
 
         #[test]
         fn test_is_less_than() {
-            assert!(Sparse::new(3, 5).unwrap().is_less_than(&Sparse::new(4, 5).unwrap()));
-            assert!(Sparse::new(4, 5).unwrap().is_less_than(&Sparse::new(4, 6).unwrap()));
-            assert!(Sparse::new(3, 5).unwrap().is_less_than(&Sparse::new(4, 6).unwrap()));
-            assert!(!Sparse::new(3, 5).unwrap().is_less_than(&Sparse::new(3, 5).unwrap()));
+            assert!(Sparse::new(3, 5)
+                .unwrap()
+                .is_less_than(&Sparse::new(4, 5).unwrap()));
+            assert!(Sparse::new(4, 5)
+                .unwrap()
+                .is_less_than(&Sparse::new(4, 6).unwrap()));
+            assert!(Sparse::new(3, 5)
+                .unwrap()
+                .is_less_than(&Sparse::new(4, 6).unwrap()));
+            assert!(!Sparse::new(3, 5)
+                .unwrap()
+                .is_less_than(&Sparse::new(3, 5).unwrap()));
 
             // Currently doesn't verify that precisions are incompatible.
-            assert!(Sparse::new(2, 6).unwrap().is_less_than(&Sparse::new(3, 5).unwrap()));
+            assert!(Sparse::new(2, 6)
+                .unwrap()
+                .is_less_than(&Sparse::new(3, 5).unwrap()));
         }
 
         #[test]

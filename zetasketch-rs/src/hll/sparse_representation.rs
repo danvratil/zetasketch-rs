@@ -10,7 +10,7 @@ use crate::hll::encoding;
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
-use crate::utils::{DifferenceDecoder, DifferenceEncoder, GrowingVarIntWriter, MergedIntIterator, SimpleVarIntReader, WriteBuffer};
+use crate::utils::{DifferenceDecoder, DifferenceEncoder, MergedIntIterator, SimpleVarIntReader};
 
 use super::representation::RepresentationUnion;
 
@@ -122,7 +122,7 @@ impl SparseRepresentation {
     }
 
     fn downgrade(self, encoding: &encoding::Sparse) -> Result<RepresentationUnion, SketchError> {
-        if !(encoding < &self.encoding) {
+        if encoding >= &self.encoding {
             return Ok(RepresentationUnion::Sparse(self));
         }
 
@@ -156,7 +156,7 @@ impl SparseRepresentation {
             RepresentationUnion::Sparse(sparse_repr)
         };
 
-        Self::add_unsorted_sparse_values(repr, &encoding, self.buffer.iter().copied())
+        Self::add_unsorted_sparse_values(repr, encoding, self.buffer.iter().copied())
     }
 
     fn add_unsorted_sparse_values<I: Iterator<Item = u32>>(
@@ -254,6 +254,7 @@ impl SparseRepresentation {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     fn deduped_iter(
         &self,
     ) -> Option<
@@ -286,7 +287,7 @@ impl RepresentationOps for SparseRepresentation {
         encoding: &encoding::Sparse,
         sparse_value: u32,
     ) -> Result<RepresentationUnion, SketchError> {
-        self.encoding.assert_compatible(&encoding);
+        self.encoding.assert_compatible(encoding);
 
         if encoding < &self.encoding {
             let mut repr = self.downgrade(encoding)?;
@@ -316,7 +317,7 @@ impl RepresentationOps for SparseRepresentation {
         encoding: &encoding::Sparse,
         sparse_values: Option<I>,
     ) -> Result<RepresentationUnion, SketchError> {
-        self.encoding.assert_compatible(&encoding);
+        self.encoding.assert_compatible(encoding);
 
         // Downgrade ourselves if the incoming values are of lower precision.
         if encoding < &self.encoding {
@@ -345,7 +346,7 @@ impl RepresentationOps for SparseRepresentation {
         // a single add_sparse_values call, but it's the only way to maintain sort order.
         if self.encoding < *encoding {
             let it = encoding.downgrade(sparse_values.into_iter(), &self.encoding);
-            let self_encoding = self.encoding.clone();
+            let self_encoding = self.encoding;
             return Self::add_unsorted_sparse_values(
                 RepresentationUnion::Sparse(self),
                 &self_encoding,
@@ -426,13 +427,14 @@ mod tests {
         normal_precision: i32,
         sparse_precision: i32,
     ) -> Result<SparseRepresentation, SketchError> {
-        let mut state = State::default();
-        state.precision = normal_precision;
-        state.sparse_precision = sparse_precision;
-        // SparseRepresentation::new expects sparse_data to be None initially for buffer logic.
-        state.sparse_data = None;
-        state.sparse_size = 0;
-        SparseRepresentation::new(state)
+        SparseRepresentation::new(State {
+            precision: normal_precision,
+            sparse_precision,
+            // SparseRepresentation::new expects sparse_data to be None initially for buffer logic.
+            sparse_data: None,
+            sparse_size: 0,
+            ..State::default()
+        })
     }
 
     // Helper for asserting sparse data content (simplified)
@@ -441,12 +443,11 @@ mod tests {
         expected_values: &[u32],
     ) -> Result<(), SketchError> {
         if expected_values.is_empty() {
-            if data.is_some() && !data.unwrap().is_empty() {
+            if let Some(data) = data {
                 // Allow empty Some(vec![]) for compacted empty sketches
-                if !data.unwrap().is_empty() {
+                if !data.is_empty() {
                     return Err(SketchError::Generic(format!(
-                        "Expected no sparse data or empty data, got {:?}",
-                        data.unwrap()
+                        "Expected no sparse data or empty data, got {data:?}",
                     )));
                 }
             }
@@ -474,16 +475,13 @@ mod tests {
             )));
         }
 
-        if !expected_values.is_empty() {
-            if expected_values == [0] {
-                let reader = SimpleVarIntReader::new(data_bytes);
-                let decoded_values: Vec<u32> = DifferenceDecoder::new(reader).collect();
-                if decoded_values != [0] {
-                    return Err(SketchError::Generic(format!(
-                        "Decoded sparse data {:?} not matching expected [0]",
-                        decoded_values
-                    )));
-                }
+        if !expected_values.is_empty() && expected_values == [0] {
+            let reader = SimpleVarIntReader::new(data_bytes);
+            let decoded_values: Vec<u32> = DifferenceDecoder::new(reader).collect();
+            if decoded_values != [0] {
+                return Err(SketchError::Generic(format!(
+                    "Decoded sparse data {decoded_values:?} not matching expected [0]"
+                )));
             }
         }
         Ok(())
@@ -646,7 +644,7 @@ mod tests {
             final_state
                 .sparse_data
                 .as_ref()
-                .map_or(true, |d| d.is_empty()),
+                .is_none_or(|d| d.is_empty()),
             "Sparse data should be None or empty after downgrade with null values"
         );
         Ok(())

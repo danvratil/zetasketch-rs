@@ -11,31 +11,41 @@ use crate::{
 };
 use protobuf::Message;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Type {
-    LONG,
-    INTEGER,
-    STRING,
-    BYTES,
+    Long,
+    Integer,
+    String,
+    Bytes,
+}
+
+impl std::fmt::Debug for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Type::Long => "LONG",
+            Type::Integer => "INTEGER",
+            Type::String => "STRING",
+            Type::Bytes => "BYTES",
+        })
+    }
 }
 
 impl Type {
     pub fn all() -> HashSet<Type> {
-        HashSet::from([Type::LONG, Type::INTEGER, Type::STRING, Type::BYTES])
+        HashSet::from([Type::Long, Type::Integer, Type::String, Type::Bytes])
     }
 
     pub fn from_value_type(value_type: ValueType) -> Result<HashSet<Type>, SketchError> {
         match value_type {
-            ValueType::DefaultOpsType(DefaultOpsTypeId::UINT64) => Ok(HashSet::from([Type::LONG])),
+            ValueType::DefaultOpsType(DefaultOpsTypeId::UINT64) => Ok(HashSet::from([Type::Long])),
             ValueType::DefaultOpsType(DefaultOpsTypeId::UINT32) => {
-                Ok(HashSet::from([Type::INTEGER]))
+                Ok(HashSet::from([Type::Integer]))
             }
             ValueType::DefaultOpsType(DefaultOpsTypeId::BYTES_OR_UTF8_STRING) => {
-                Ok(HashSet::from([Type::STRING, Type::BYTES]))
+                Ok(HashSet::from([Type::String, Type::Bytes]))
             }
             _ => Err(SketchError::InvalidState(format!(
-                "Unsupported value type {:?}",
-                value_type
+                "Unsupported value type {value_type:?}"
             ))),
         }
     }
@@ -49,13 +59,13 @@ impl Type {
     }
 }
 
-impl Into<ValueType> for Type {
-    fn into(self) -> ValueType {
-        match self {
-            Type::LONG => ValueType::DefaultOpsType(DefaultOpsTypeId::UINT64),
-            Type::INTEGER => ValueType::DefaultOpsType(DefaultOpsTypeId::UINT32),
-            Type::STRING => ValueType::DefaultOpsType(DefaultOpsTypeId::BYTES_OR_UTF8_STRING),
-            Type::BYTES => ValueType::DefaultOpsType(DefaultOpsTypeId::BYTES_OR_UTF8_STRING),
+impl From<Type> for ValueType {
+    fn from(val: Type) -> Self {
+        match val {
+            Type::Long => ValueType::DefaultOpsType(DefaultOpsTypeId::UINT64),
+            Type::Integer => ValueType::DefaultOpsType(DefaultOpsTypeId::UINT32),
+            Type::String => ValueType::DefaultOpsType(DefaultOpsTypeId::BYTES_OR_UTF8_STRING),
+            Type::Bytes => ValueType::DefaultOpsType(DefaultOpsTypeId::BYTES_OR_UTF8_STRING),
         }
     }
 }
@@ -103,7 +113,7 @@ impl HyperLogLogPlusPlus {
     pub fn from_proto(proto: AggregatorStateProto) -> Result<Self, SketchError> {
         let bytes = proto
             .write_to_bytes()
-            .map_err(|e| SketchError::ProtoDeserialization(e))?;
+            .map_err(SketchError::ProtoDeserialization)?;
         Self::from_bytes(&bytes)
     }
 
@@ -112,32 +122,32 @@ impl HyperLogLogPlusPlus {
     }
 
     pub fn add_i32(&mut self, value: i32) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::INTEGER)?;
+        self.check_and_set_type(Type::Integer)?;
         self.add_hash(Hash::of_i32(value))
     }
 
     pub fn add_u32(&mut self, value: u32) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::INTEGER)?;
+        self.check_and_set_type(Type::Integer)?;
         self.add_hash(Hash::of_u32(value))
     }
 
     pub fn add_i64(&mut self, value: i64) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::LONG)?;
+        self.check_and_set_type(Type::Long)?;
         self.add_hash(Hash::of_i64(value))
     }
 
     pub fn add_u64(&mut self, value: u64) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::LONG)?;
+        self.check_and_set_type(Type::Long)?;
         self.add_hash(Hash::of_u64(value))
     }
 
     pub fn add_bytes(&mut self, value: &[u8]) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::BYTES)?;
+        self.check_and_set_type(Type::Bytes)?;
         self.add_hash(Hash::of_bytes(value))
     }
 
     pub fn add_string(&mut self, value: &str) -> Result<(), SketchError> {
-        self.check_and_set_type(Type::STRING)?;
+        self.check_and_set_type(Type::String)?;
         self.add_hash(Hash::of_string(value))
     }
 
@@ -257,16 +267,17 @@ impl HyperLogLogPlusPlusBuilder {
     }
 
     fn build_state(self, ops_type: DefaultOpsTypeId) -> State {
-        let mut state = State::default();
-        state.r#type = AggregatorType::HYPERLOGLOG_PLUS_UNIQUE;
-        state.encoding_version = HyperLogLogPlusPlus::ENCODING_VERSION;
-        state.precision = self.normal_precision;
-        state.sparse_precision = match self.sparse_precision {
-            Some(precision) => precision,
-            None => self.normal_precision + HyperLogLogPlusPlus::DEFAULT_SPARSE_PRECISION_DELTA,
-        };
-        state.value_type = ValueType::DefaultOpsType(ops_type);
-        state
+        State {
+            r#type: AggregatorType::HYPERLOGLOG_PLUS_UNIQUE,
+            encoding_version: HyperLogLogPlusPlus::ENCODING_VERSION,
+            precision: self.normal_precision,
+            sparse_precision: match self.sparse_precision {
+                Some(precision) => precision,
+                None => self.normal_precision + HyperLogLogPlusPlus::DEFAULT_SPARSE_PRECISION_DELTA,
+            },
+            value_type: ValueType::DefaultOpsType(ops_type),
+            ..State::default()
+        }
     }
 }
 
@@ -395,7 +406,7 @@ mod tests {
                 HyperLogLogPlusUniqueStateProto::parse_from_bytes(data)
                     .expect("Failed to parse HLL extension")
             }
-            _ => panic!("Unexpected extension type: {:?}", ext_data),
+            _ => panic!("Unexpected extension type: {ext_data:?}"),
         }
     }
 
@@ -436,9 +447,9 @@ mod tests {
 
             for _k in 0..num_values {
                 let value = random.next_i64() as u64;
-                aggregator.add_u64(value).expect(&format!(
-                    "Failed to add value {value} to aggregator (i={_i}, k={_k})"
-                ));
+                aggregator.add_u64(value).unwrap_or_else(|_| {
+                    panic!("Failed to add value {value} to aggregator (i={_i}, k={_k})")
+                });
                 overall_aggregator
                     .add_u64(value)
                     .expect("Failed to add value to overall_aggregator");
@@ -508,7 +519,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type BYTES to aggregator of type {LONG}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -525,7 +536,7 @@ mod tests {
             // Type is now fixed to BYTES
             assert!(msg.contains("Unable to add type STRING to aggregator of type {BYTES}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -540,7 +551,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type LONG to aggregator of type {BYTES}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -565,7 +576,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type INTEGER to aggregator of type {LONG}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -580,7 +591,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type LONG to aggregator of type {INTEGER}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -605,7 +616,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type LONG to aggregator of type {INTEGER}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -620,7 +631,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type INTEGER to aggregator of type {LONG}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -646,7 +657,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type BYTES to aggregator of type {STRING}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -661,7 +672,7 @@ mod tests {
         if let Err(SketchError::InvalidState(msg)) = result {
             assert!(msg.contains("Unable to add type INTEGER to aggregator of type {STRING}"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -680,7 +691,7 @@ mod tests {
                 HyperLogLogPlusPlus::MAXIMUM_PRECISION + 1
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -699,7 +710,7 @@ mod tests {
                 HyperLogLogPlusPlus::MINIMUM_PRECISION - 1
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -716,7 +727,7 @@ mod tests {
         if let SketchError::IllegalArgument(msg) = result {
             assert!(msg.contains("Expected normal precision to be >= 10 and <= 24 but was 0"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -750,7 +761,7 @@ mod tests {
                 HyperLogLogPlusPlus::MAXIMUM_PRECISION + 1
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -779,7 +790,7 @@ mod tests {
                 HyperLogLogPlusPlus::MINIMUM_PRECISION - 1
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -798,7 +809,7 @@ mod tests {
                 msg.contains("Expected proto to be of type HYPERLOGLOG_PLUS_UNIQUE but was SUM")
             );
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -830,7 +841,7 @@ mod tests {
         if let SketchError::InvalidState(msg) = result {
             assert!(msg.contains("Must have a sparse precision when sparse data is set"));
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
@@ -862,7 +873,7 @@ mod tests {
                 sparse_p
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -894,7 +905,7 @@ mod tests {
                 sparse_p
             )));
         } else {
-            panic!("Unexpected error type or message: {:?}", result);
+            panic!("Unexpected error type or message: {result:?}");
         }
     }
 
@@ -985,7 +996,7 @@ mod tests {
         if let Err(SketchError::ProtoDeserialization(_)) = result {
             // Correct error type
         } else {
-            panic!("Unexpected error type: {:?}", result);
+            panic!("Unexpected error type: {result:?}");
         }
     }
 
