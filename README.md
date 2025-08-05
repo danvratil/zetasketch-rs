@@ -1,0 +1,39 @@
+# ZetaSketch RS
+
+A native Rust re-implementation of the
+[Zetasketch](https://github.com/google/zetasketch) Java library by Google.
+
+The ZetaSketch library provides an implementation of the HyperLogLog++
+algorithm used by several Google Cloud products, most notably BigQuery and
+BigTable to implement.
+
+This library allows deserializing, modifying and serializing the HyperLogLog++
+sketches used by these products.
+
+You can learn more details about ZetaSketch and its HyperLogLog++
+implementation in the
+[README in the original
+library](https://github.com/google/zetasketch/blob/master/README.md).
+
+This reimplementation is based on version 0.1.0 of the original library, which
+is the only version published.
+
+## Compatibility
+
+This library was implemented as a translation of the original Java code into
+Rust, then refined here and there to improve performance and to be more
+idiomatic. It strives to be 100% compatible with the Java library, which means
+that for identical inputs, it should produce 100% identical sketches as the
+Java library. Any deviation should be considered a bug.
+
+We are using the [`j4rs`](https://github.com/astonbitecode/j4rs) crate for testing,
+which allows to call us the original Java library from our Rust tests and compare
+the behavior of both libraries.
+
+## License
+
+This project is licensed under the MIT license. See the [LICENSE](LICENSE) file
+for details.
+
+The original library is licensed under the Apache License 2.0.
+
