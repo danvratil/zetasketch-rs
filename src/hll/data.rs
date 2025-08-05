@@ -1,5 +1,13 @@
-// Contains constants and lookup tables for bias correction and LinearCounting thresholds.
-// Replicates com.google.zetasketch.internal.hllplus.Data.java
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+//
+// Based on the original Zetasketch implementation by Google:
+// https://github.com/google/zetasketch
+// Published under the Apache License 2.0
+
+//! Contains constants and lookup tables for bias correction and LinearCounting thresholds.
+//! Replicates com.google.zetasketch.internal.hllplus.Data.java
 
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;

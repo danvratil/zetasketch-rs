@@ -1,3 +1,12 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+//
+// Based on the original Zetasketch implementation by Google:
+// https://github.com/google/zetasketch
+// Published under the Apache License 2.0
+
+
 pub struct MergedIntIterator<I1: Iterator<Item = u32>, I2: Iterator<Item = u32>> {
     iter1: I1,
     iter2: I2,

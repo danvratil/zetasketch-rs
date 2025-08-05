@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 mod common;
 
 use assert2::assert;

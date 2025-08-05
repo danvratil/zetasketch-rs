@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 // This file will be populated by prost-build in build.rs
 
 // Include the generated Protobuf code.

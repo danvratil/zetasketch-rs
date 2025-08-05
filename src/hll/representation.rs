@@ -1,3 +1,12 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+//
+// Based on the original Zetasketch implementation by Google:
+// https://github.com/google/zetasketch
+// Published under the Apache License 2.0
+
+
 // Replicates com.google.zetasketch.internal.hllplus.Representation.java (the abstract class)
 
 use crate::error::SketchError;

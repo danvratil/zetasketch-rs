@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 //! Implementation of Geoff Pike's fingerprint2011 hash.
 //!
 //! This code was taken from the implementation of fingerprint2011 hash in Google's

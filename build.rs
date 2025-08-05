@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 use std::env;
 use std::path::PathBuf;
 use j4rs::{JvmBuilder, MavenArtifact};

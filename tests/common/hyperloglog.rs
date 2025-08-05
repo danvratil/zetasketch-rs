@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 use std::sync::Arc;
 
 use super::Error;

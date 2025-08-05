@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Daniel Vrátil <me@dvratil.cz>
+//
+// SPDX-License-Identifier: MIT
+
 use j4rs::{JavaOpt, Jvm, JvmBuilder};
 use std::sync::Arc;
 use thiserror::Error;
