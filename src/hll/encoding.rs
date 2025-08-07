@@ -145,22 +145,22 @@ impl Sparse {
         })
     }
 
-    // FIXME: Redo to return Result<(), SketchError> with IncompativeEncoding error
-    pub fn assert_compatible(&self, other: &Self) {
+    pub fn assert_compatible(&self, other: &Self) -> Result<(), SketchError> {
         if ((self.normal_precision <= other.normal_precision)
             && (self.sparse_precision <= other.sparse_precision))
             || ((self.normal_precision >= other.normal_precision)
                 && (self.sparse_precision >= other.sparse_precision))
         {
-            return;
+            return Ok(());
         }
-        panic!(
-            "Precisions (p={}, sp={}) and (p={}, sp={}) are not compatible",
+
+        Err(SketchError::IncompatiblePrecision(format!(
+            "Precisions (normal={}, sparse={}) and (normal={}, sparse={}) are not compatible",
             self.normal_precision,
             self.sparse_precision,
             other.normal_precision,
             other.sparse_precision
-        );
+        )))
     }
 
     #[cfg(test)]
@@ -414,23 +414,28 @@ mod tests {
         fn test_assert_compatible_matching_precisions() {
             let a = Sparse::new(6, 11).unwrap();
             let b = Sparse::new(6, 11).unwrap();
-            a.assert_compatible(&b);
+            a.assert_compatible(&b)
+                .expect("Precisions should be compatible");
         }
 
         #[test]
         fn test_assert_compatible_downgrade_normal_precision() {
             let a = Sparse::new(6, 11).unwrap();
             let b = Sparse::new(7, 11).unwrap();
-            a.assert_compatible(&b);
-            b.assert_compatible(&a);
+            a.assert_compatible(&b)
+                .expect("Precisions should be compatible");
+            b.assert_compatible(&a)
+                .expect("Precisions should be compatible");
         }
 
         #[test]
         fn test_assert_compatible_downgrade_sparse_precision() {
             let a = Sparse::new(6, 11).unwrap();
             let b = Sparse::new(6, 12).unwrap();
-            a.assert_compatible(&b);
-            b.assert_compatible(&a);
+            a.assert_compatible(&b)
+                .expect("Precisions should be compatible");
+            b.assert_compatible(&a)
+                .expect("Precisions should be compatible");
         }
 
         #[test]
@@ -439,7 +444,8 @@ mod tests {
             let a = Sparse::new(7, 11).unwrap();
             let b = Sparse::new(6, 12).unwrap();
 
-            a.assert_compatible(&b);
+            a.assert_compatible(&b)
+                .expect("Precisions should be compatible");
         }
 
         #[test]
@@ -448,7 +454,8 @@ mod tests {
             let a = Sparse::new(6, 11).unwrap();
             let b = Sparse::new(7, 10).unwrap();
 
-            b.assert_compatible(&a);
+            b.assert_compatible(&a)
+                .expect("Precisions should be compatible");
         }
 
         #[test]

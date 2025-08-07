@@ -277,7 +277,7 @@ impl RepresentationOps for SparseRepresentation {
         encoding: &encoding::Sparse,
         sparse_value: u32,
     ) -> Result<RepresentationUnion, SketchError> {
-        self.encoding.assert_compatible(encoding);
+        self.encoding.assert_compatible(encoding)?;
 
         if encoding < &self.encoding {
             let mut repr = self.downgrade(encoding)?;
@@ -307,7 +307,7 @@ impl RepresentationOps for SparseRepresentation {
         encoding: &encoding::Sparse,
         sparse_values: Option<I>,
     ) -> Result<RepresentationUnion, SketchError> {
-        self.encoding.assert_compatible(encoding);
+        self.encoding.assert_compatible(encoding)?;
 
         // Downgrade ourselves if the incoming values are of lower precision.
         if encoding < &self.encoding {
