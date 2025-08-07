@@ -7,11 +7,9 @@
 use std::sync::Arc;
 
 use super::Error;
-use zetasketch_rs::protos as proto;
 
 use base64::prelude::*;
 use j4rs::{errors::J4RsError, Instance, InvocationArg, Jvm};
-use protobuf::Message;
 
 pub struct HyperLogLogPlusPlusBuilder {
     jvm: Arc<Jvm>,
@@ -162,10 +160,6 @@ impl<T> HyperLogLogPlusPlus<T> {
         Ok(())
     }
 
-    pub fn merge_proto(&self, state: proto::AggregatorStateProto) -> Result<(), Error> {
-        self.merge_proto_bytes(state.write_to_bytes()?.as_slice())
-    }
-
     pub fn merge_proto_bytes(&self, proto_bytes: &[u8]) -> Result<(), Error> {
         let jarray = self.jvm.create_java_array(
             "byte",
@@ -208,11 +202,6 @@ impl<T> HyperLogLogPlusPlus<T> {
             .jvm
             .invoke(&self.hll, "getSparsePrecision", InvocationArg::empty())?;
         self.jvm.to_rust(result).map_err(Error::JavaError)
-    }
-
-    pub fn serialize_to_proto(&self) -> Result<proto::AggregatorStateProto, Error> {
-        let bytes = self.serialize_to_byte_array()?;
-        proto::AggregatorStateProto::parse_from_bytes(bytes.as_slice()).map_err(Error::ProtoError)
     }
 
     pub fn serialize_to_byte_array(&self) -> Result<Vec<u8>, Error> {
@@ -263,7 +252,7 @@ impl HyperLogLogPlusPlus<u32> {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::Zetasketch;
+    use crate::Zetasketch;
 
     #[test]
     fn test_add_str() {

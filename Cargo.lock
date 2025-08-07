@@ -308,6 +308,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 [[package]]
 name = "j4rs"
 version = "0.23.0-SNAPSHOT"
+source = "git+https://github.com/danvratil/j4rs.git?branch=overload-ordering#3514b5df999b0d1513e59ed4969cb942e3dd50a2"
 dependencies = [
  "cesu8",
  "dunce",
@@ -930,17 +931,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "zetasketch-java"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "j4rs",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
 name = "zetasketch-rs"
 version = "0.1.0"
 dependencies = [
  "approx",
  "assert2",
- "base64",
  "byteorder",
  "bytes",
  "itertools 0.14.0",
- "j4rs",
- "log",
  "once_cell",
  "ordered-float",
  "prost",
@@ -950,4 +958,5 @@ dependencies = [
  "protobuf-codegen",
  "rand",
  "thiserror",
+ "zetasketch-java",
 ]

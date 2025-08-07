@@ -2,12 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
-mod common;
-
 use assert2::assert;
-use common::Zetasketch as JavaZetasketch;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use zetasketch_java::Zetasketch as JavaZetasketch;
 use zetasketch_rs::{aggregator::Aggregator, HyperLogLogPlusPlus};
 
 #[test]
@@ -24,7 +22,6 @@ fn test_compatibility_with_java_implementation() {
 
     let mut rng = StdRng::seed_from_u64(42);
     let num_values = rng.random_range(10_000..100_000);
-    let num_values = 3_000;
     for _i in 0..num_values {
         let value = rng.random_range(0..10_000);
 
@@ -86,3 +83,4 @@ fn test_compatibility_with_java_implementation() {
     // TODO: test merging from Java to Rust and vice versa
     // TODO: test merging from Rust to Java and vice versa
 }
+
