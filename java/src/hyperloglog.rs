@@ -151,11 +151,8 @@ impl<T> HyperLogLogPlusPlus<T> {
     }
 
     pub fn merge(&self, other: Self) -> Result<(), Error> {
-        self.jvm.invoke(
-            &self.hll,
-            "merge",
-            &[InvocationArg::from(other.hll)],
-        )?;
+        self.jvm
+            .invoke(&self.hll, "merge", &[InvocationArg::from(other.hll)])?;
 
         Ok(())
     }
