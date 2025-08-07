@@ -20,6 +20,7 @@ use crate::{
 };
 use protobuf::Message;
 
+/// Type of the HLL sketch
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Type {
     Long,
@@ -79,6 +80,17 @@ impl From<Type> for ValueType {
     }
 }
 
+/// HLL++ aggregator for estimating cardinalities of multisets.
+/// 
+/// The aggregator uses the standard format for storing the internal state of the cardinality
+/// estimate as defined in hllplus-unique.proto, allowing users to merge aggregators with data
+/// computed in C++ or Go and to load up the cardinalities in a variety of analysis tools.
+///
+/// The precision defines the accuracy of the HLL++ aggregator at the cost of the memory used. The
+/// upper bound on the memory required is 2<sup>precision</sup> bytes, but less memory is used for
+/// smaller cardinalities (up to ~2<sup>precision - 2</sup>). The relative error is 1.04 /
+/// sqrt(2<sup>precision</sup>). A typical value used at Google is 15, which gives an error of about
+///  0.6% while requiring an upper bound of 32 KiB of memory.
 #[derive(Debug, Clone)]
 pub struct HyperLogLogPlusPlus {
     representation: Representation,
@@ -86,14 +98,23 @@ pub struct HyperLogLogPlusPlus {
 }
 
 impl HyperLogLogPlusPlus {
+    /// The smallest normal precision supported by this aggregator.
     pub const MINIMUM_PRECISION: i32 = NormalRepresentation::MINIMUM_PRECISION;
+    /// The largest normal precision supported by this aggregator.
     pub const MAXIMUM_PRECISION: i32 = NormalRepresentation::MAXIMUM_PRECISION;
+    /// The default normal precision that is used if the user does not specify a normal precision.
     pub const DEFAULT_NORMAL_PRECISION: i32 = 15;
+    /// The largest sparse precision supported by this aggregator.
     pub const MAXIMUM_SPARSE_PRECISION: i32 = SparseRepresentation::MAXIMUM_SPARSE_PRECISION;
+    /// Value used to indicate that the sparse representation should not be used.
     pub const SPARSE_PRECISION_DISABLED: i32 = SparseRepresentation::SPARSE_PRECISION_DISABLED;
+    /// If no sparse precision is specified, this value is added to the normal precision to obtain
+    /// the sparse precision, which optimizes the memory-precision trade-off.
     pub const DEFAULT_SPARSE_PRECISION_DELTA: i32 = 5;
+    /// The encoding version of the [`AggregatorStateProto`]. We only support v2.
     pub const ENCODING_VERSION: i32 = 2;
 
+    /// Returns a new builder to customize and create a new instance of this aggregator.
     pub fn builder() -> HyperLogLogPlusPlusBuilder {
         HyperLogLogPlusPlusBuilder::new()
     }
@@ -119,6 +140,9 @@ impl HyperLogLogPlusPlus {
         })
     }
 
+    /// Creates a new HyperLogLog++ aggregator from the serialized `proto`.
+    /// 
+    /// The `proto` must be a valid aggregator state of type [`AggregatorType::HYPERLOGLOG_PLUS_UNIQUE`].
     pub fn from_proto(proto: AggregatorStateProto) -> Result<Self, SketchError> {
         let bytes = proto
             .write_to_bytes()
@@ -126,44 +150,74 @@ impl HyperLogLogPlusPlus {
         Self::from_bytes(&bytes)
     }
 
+    /// Creates a new HyperLogLog++ aggregator from the `bytes`.
+    ///
+    /// The `bytes` must be a valid serialized [`AggregatorStateProto`] of the type
+    /// [`AggregatorType::HYPERLOGLOG_PLUS_UNIQUE`].
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SketchError> {
         Self::from_state(State::parse(bytes)?)
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `i32` or `u32`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_u32`].
     pub fn add_i32(&mut self, value: i32) -> Result<(), SketchError> {
         self.check_and_set_type(Type::Integer)?;
         self.add_hash(Hash::of_i32(value))
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `i32` or `u32`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_u32`].
     pub fn add_u32(&mut self, value: u32) -> Result<(), SketchError> {
         self.check_and_set_type(Type::Integer)?;
         self.add_hash(Hash::of_u32(value))
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `i64` or `u64`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_u64`].
     pub fn add_i64(&mut self, value: i64) -> Result<(), SketchError> {
         self.check_and_set_type(Type::Long)?;
         self.add_hash(Hash::of_i64(value))
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `i64` or `u64`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_u64`].
     pub fn add_u64(&mut self, value: u64) -> Result<(), SketchError> {
         self.check_and_set_type(Type::Long)?;
         self.add_hash(Hash::of_u64(value))
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `bytes`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_bytes`].
     pub fn add_bytes(&mut self, value: &[u8]) -> Result<(), SketchError> {
         self.check_and_set_type(Type::Bytes)?;
         self.add_hash(Hash::of_bytes(value))
     }
 
+    /// Add `value` to the aggregator.
+    ///
+    /// Returns [`SketchError`] if the aggregator is of different type than `string`.
+    /// See [`HyperLogLogPlusPlusBuilder::build_for_string`].
     pub fn add_string(&mut self, value: &str) -> Result<(), SketchError> {
         self.check_and_set_type(Type::String)?;
         self.add_hash(Hash::of_string(value))
     }
 
+    /// Returns the normal precision of the aggregator.
     pub fn normal_precision(&self) -> i32 {
         self.representation.state().precision
     }
 
+    /// Returns the sparse precision of the aggregator.
     pub fn sparse_precision(&self) -> i32 {
         self.representation.state().sparse_precision
     }
@@ -246,32 +300,53 @@ impl HyperLogLogPlusPlusBuilder {
         }
     }
 
+    /// Sets the normal precision to be used. Must be in the range from [`HyperLogLogPlusPlus::MINIMUM_PRECISION`]
+    /// to [`HyperLogLogPlusPlus::MAXIMUM_PRECISION`] (inclusive).
+    ///
+    /// The precision defines the accuracy of the HLL++ aggregator at the cost of the memory used.
+    /// The upper bound on the memory required is 2<sup>precision</sup> bytes, but less memory is
+    /// used for smaller cardinalities (up to ~2<sup>precision - 2</sup>). The relative error is 1.04
+    /// / sqrt(2<sup>precision</sup>). If not specified, [`HyperLogLogPlusPlus::DEFAULT_NORMAL_PRECISION`]` is used,
+    ///  which gives an error of about 0.6% while requiring an upper bound of 32 nbsp;KiB of memory.
     pub fn normal_precision(mut self, normal_precision: i32) -> Self {
         self.normal_precision = normal_precision;
         self
     }
 
+    /// Sets the sparse precision to be used. Must be in the range from the [`HyperLogLogPlusPlusBuilder::normal_precision`]
+    /// to [`HyperLogLogPlusPlus::MAXIMUM_SPARSE_PRECISION`] (inclusive), or [`HyperLogLogPlusPlus::SPARSE_PRECISION_DISABLED`]
+    /// to disable the use of the sparse representation. We recommend to use [`HyperLogLogPlusPlusBuilder::no_sparse_mode`]
+    /// for the latter, though.
+    ///
+    /// If not specified, the normal precision + [`HyperLogLogPlusPlus::DEFAULT_SPARSE_PRECISION_DELTA`] is used.
     pub fn sparse_precision(mut self, sparse_precision: i32) -> Self {
         self.sparse_precision = Some(sparse_precision);
         self
     }
 
+    /// Disable the "sparse representation" mode; i.e., the normal representation, where all
+    /// registers are explicitly stored, and its method to compute the `COUNT DISTINCT` estimate
+    /// are used from the start of the aggregation.
     pub fn no_sparse_mode(self) -> Self {
         self.sparse_precision(HyperLogLogPlusPlus::SPARSE_PRECISION_DISABLED)
     }
 
+    /// Returns a new HLL++ aggregator for counting the number of unique byte arrays in a stream.
     pub fn build_for_bytes(self) -> Result<HyperLogLogPlusPlus, SketchError> {
         HyperLogLogPlusPlus::from_state(self.build_state(DefaultOpsTypeId::BYTES_OR_UTF8_STRING))
     }
 
+    /// Returns a new HLL++ aggregator for counting the number of unique strings in a stream.
     pub fn build_for_string(self) -> Result<HyperLogLogPlusPlus, SketchError> {
         HyperLogLogPlusPlus::from_state(self.build_state(DefaultOpsTypeId::BYTES_OR_UTF8_STRING))
     }
 
+    /// Returns a new HLL++ aggregator for counting the number of unique 32-bit integers in a stream.
     pub fn build_for_u32(self) -> Result<HyperLogLogPlusPlus, SketchError> {
         HyperLogLogPlusPlus::from_state(self.build_state(DefaultOpsTypeId::UINT32))
     }
 
+    /// Returns a new HLL++ aggregator for counting the number of unique 64-bit integers in a stream.
     pub fn build_for_u64(self) -> Result<HyperLogLogPlusPlus, SketchError> {
         HyperLogLogPlusPlus::from_state(self.build_state(DefaultOpsTypeId::UINT64))
     }
