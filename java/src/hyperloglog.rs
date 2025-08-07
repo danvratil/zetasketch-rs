@@ -115,7 +115,7 @@ impl<T> HyperLogLogPlusPlus<T> {
             "byte",
             bytes
                 .iter()
-                .map(|b| Ok::<_, J4RsError>(InvocationArg::try_from(*b as i8)?.into_primitive()?))
+                .map(|b| InvocationArg::try_from(*b as i8)?.into_primitive())
                 .collect::<Result<Vec<_>, J4RsError>>()?
                 .as_slice(),
         )?;
@@ -154,7 +154,7 @@ impl<T> HyperLogLogPlusPlus<T> {
         self.jvm.invoke(
             &self.hll,
             "merge",
-            &[InvocationArg::try_from(other.hll).unwrap()],
+            &[InvocationArg::from(other.hll)],
         )?;
 
         Ok(())
@@ -165,7 +165,7 @@ impl<T> HyperLogLogPlusPlus<T> {
             "byte",
             proto_bytes
                 .iter()
-                .map(|b| Ok::<_, J4RsError>(InvocationArg::try_from(*b as i8)?.into_primitive()?))
+                .map(|b| InvocationArg::try_from(*b as i8)?.into_primitive())
                 .collect::<Result<Vec<_>, J4RsError>>()?
                 .as_slice(),
         )?;
@@ -229,7 +229,7 @@ impl HyperLogLogPlusPlus<Vec<u8>> {
             "byte",
             value
                 .iter()
-                .map(|b| Ok::<_, J4RsError>(InvocationArg::try_from(*b as i8)?.into_primitive()?))
+                .map(|b| InvocationArg::try_from(*b as i8)?.into_primitive())
                 .collect::<Result<Vec<_>, J4RsError>>()?
                 .as_slice(),
         )?;

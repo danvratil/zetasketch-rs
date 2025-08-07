@@ -18,6 +18,7 @@ pub enum Error {
     ProtoError(#[from] protobuf::Error),
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 pub struct Zetasketch {
     jvm: Arc<Jvm>,
 }
@@ -28,7 +29,9 @@ impl Zetasketch {
             .java_opt(JavaOpt::new("--illegal-access=warn"))
             .build()?;
 
-        Ok(Self { jvm: Arc::new(jvm) })
+        #[allow(clippy::arc_with_non_send_sync)]
+        let arc_jvm = Arc::new(jvm);
+        Ok(Self { jvm: arc_jvm })
     }
 
     pub fn builder(&self) -> Result<HyperLogLogPlusPlusBuilder, Error> {
