@@ -15,9 +15,7 @@ use crate::hll::sparse_representation::SparseRepresentation;
 use crate::hll::state::State;
 use std::cell::{Ref, RefMut};
 
-use super::encoding;
-
-// Value used to indicate that the sparse representation should not be used.
+/// Value used to indicate that the sparse representation should not be used.
 pub const SPARSE_PRECISION_DISABLED: i32 = 0;
 
 /// Trait defining common operations for HLL representations.
@@ -132,40 +130,6 @@ impl Representation {
         Ok(())
     }
 
-    pub fn add_sparse_value(
-        &mut self,
-        encoding: &crate::hll::encoding::Sparse,
-        sparse_value: u32,
-    ) -> Result<(), SketchError> {
-        self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
-            RepresentationUnion::Normal(n) => n.add_sparse_value(encoding, sparse_value)?,
-            RepresentationUnion::Sparse(s) => s.add_sparse_value(encoding, sparse_value)?,
-            RepresentationUnion::Invalid => {
-                return Err(SketchError::InvalidState(
-                    "Representation is invalid".to_string(),
-                ))
-            }
-        };
-        Ok(())
-    }
-
-    pub fn add_sparse_values<I: IntoIterator<Item = u32>>(
-        &mut self,
-        encoding: &encoding::Sparse,
-        sparse_values: Option<I>,
-    ) -> Result<(), SketchError> {
-        self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
-            RepresentationUnion::Normal(n) => n.add_sparse_values(encoding, sparse_values)?,
-            RepresentationUnion::Sparse(s) => s.add_sparse_values(encoding, sparse_values)?,
-            RepresentationUnion::Invalid => {
-                return Err(SketchError::InvalidState(
-                    "Representation is invalid".to_string(),
-                ))
-            }
-        };
-        Ok(())
-    }
-
     pub fn estimate(&self) -> Result<i64, SketchError> {
         match &self.repr {
             RepresentationUnion::Normal(n) => n.estimate(),
@@ -174,39 +138,6 @@ impl Representation {
                 "Representation is invalid".to_string(),
             )),
         }
-    }
-
-    pub fn merge_from_normal(&mut self, other: NormalRepresentation) -> Result<(), SketchError> {
-        self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
-            RepresentationUnion::Normal(n) => n.merge_from_normal(other)?,
-            RepresentationUnion::Sparse(_s) => {
-                // Sparse merging with Normal always results in Normal.
-                // The typical flow is: sparse normalizes itself, then merges the other normal representation.
-                // let mut normalized_self = s.normalize_representation()?;
-                // let new_repr = normalized_self.merge_from_normal(other)?;
-                // Ok(Some(new_repr.unwrap_or(Box::new(normalized_self)))) // if merge_from_normal returns Option
-                todo!("Sparse to Normal merge requires SparseRepresentation::normalize_representation")
-            }
-            RepresentationUnion::Invalid => {
-                return Err(SketchError::InvalidState(
-                    "Representation is invalid".to_string(),
-                ))
-            }
-        };
-        Ok(())
-    }
-
-    pub fn merge_from_sparse(&mut self, other: SparseRepresentation) -> Result<(), SketchError> {
-        self.repr = match std::mem::replace(&mut self.repr, RepresentationUnion::Invalid) {
-            RepresentationUnion::Normal(n) => n.merge_from_sparse(other)?,
-            RepresentationUnion::Sparse(s) => s.merge_from_sparse(other)?,
-            RepresentationUnion::Invalid => {
-                return Err(SketchError::InvalidState(
-                    "Representation is invalid".to_string(),
-                ))
-            }
-        };
-        Ok(())
     }
 
     pub fn compact(&mut self) -> Result<(), SketchError> {
@@ -255,7 +186,10 @@ impl Representation {
         };
         Ok(())
     }
+}
 
+#[cfg(test)]
+impl Representation {
     pub fn is_normal(&self) -> bool {
         matches!(self.repr, RepresentationUnion::Normal(_))
     }

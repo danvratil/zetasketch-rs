@@ -275,40 +275,33 @@ impl Sparse {
         self.normal_encoder
     }
 
-    /// Takes a sorted vector of sparse values and returns a vector with deduplicated indices,
-    /// returning only the one with the largest rho(w'). For example, a list of sparse
-    /// values with p=4 and sp=7 such as:
-    ///
-    /// ```text
-    /// 0 000 0010100
-    /// 0 000 1010100
-    /// 0 000 1010101
-    /// 1 1010 001100
-    /// 1 1010 010000
-    /// 1 1110 000000
-    /// ```
-    ///
-    /// Will be deduplicated to:
-    ///
-    /// ```text
-    /// 0 000 0010100
-    /// 0 000 1010100
-    /// 0 000 1010101
-    /// 1 1010 010000
-    /// 1 1110 000000
-    /// ```
-    pub fn dedupe<I: Iterator<Item = u32>>(&self, sorted_values: I) -> DedupeIterator<I> {
-        return DedupeIterator::new(sorted_values, *self);
-    }
-
     pub fn downgrade<I: Iterator<Item = u32>>(&self, iter: I, target: &Sparse) -> Vec<u32> {
         iter.map(|val| self.downgrade_sparse_value(val, target))
             .collect()
     }
-
-    // TODO: `downgrade(sparse_value, target_sparse_encoding)` to re-encode for different sparse precision
 }
 
+/// An iterator that takes a sorted iterator over sparse values and returns a deduplicates indices, 
+/// returning only the one with the largest rho(w'). For example, a list of sparse
+/// values with p=4 and sp=7 such as:
+///
+/// ```text
+/// 0 000 0010100
+/// 0 000 1010100
+/// 0 000 1010101
+/// 1 1010 001100
+/// 1 1010 010000
+/// 1 1110 000000
+/// ```
+///
+/// Will be deduplicated to:
+///
+/// ```text
+/// 0 000 0010100
+/// 0 000 1010100
+/// 0 000 1010101
+/// 1 1110 000000
+/// ```
 #[derive(Debug)]
 pub struct DedupeIterator<I: Iterator<Item = u32>> {
     iter: Peekable<I>,
@@ -573,7 +566,7 @@ mod tests {
 
             let encoding = Sparse::new(4, 7).unwrap();
             assert_eq!(
-                encoding.dedupe(input.into_iter()).collect::<Vec<_>>(),
+                DedupeIterator::new(input.into_iter(), encoding).collect::<Vec<_>>(),
                 vec![
                     0b00000010100,
                     0b00001010100,
@@ -596,7 +589,7 @@ mod tests {
             ];
             let encoding = Sparse::new(4, 7).unwrap();
             assert_eq!(
-                encoding.dedupe(input.into_iter()).collect::<Vec<_>>(),
+                DedupeIterator::new(input.into_iter(), encoding).collect::<Vec<_>>(),
                 vec![0b00000010100, 0b11010001100,]
             );
         }

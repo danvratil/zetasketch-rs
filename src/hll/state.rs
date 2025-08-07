@@ -79,7 +79,8 @@ impl State {
     const DEFAULT_PRECISION_OR_NUM_BUCKETS: i32 = 0;
     const DEFAULT_SPARSE_PRECISION_OR_NUM_BUCKETS: i32 = 0;
 
-    pub fn has_data(&self) -> bool {
+    #[cfg(test)]
+    fn has_data(&self) -> bool {
         match &self.data {
             Some(data) => !data.is_empty(),
             None => false,

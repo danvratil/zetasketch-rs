@@ -2896,7 +2896,7 @@ fn closest_bias(estimate: f64, precision: i32) -> Vec<WeightedBias> {
 
     let index = match means.binary_search(&OrderedFloat(estimate)) {
         Ok(idx) => idx,
-        Err(idx) => idx + 1, // TODO(port): drop the +1?
+        Err(idx) => idx + 1,
     };
 
     let bottom = index.saturating_sub(NUMBER_OF_NEIGHBORS_IN_KNN);

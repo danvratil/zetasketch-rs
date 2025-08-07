@@ -19,7 +19,8 @@ use crate::hll::encoding::{self, DedupeIterator};
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
-use crate::utils::{DifferenceDecoder, DifferenceEncoder, MergedIntIterator, SimpleVarIntReader};
+use crate::utils::{DifferenceDecoder, DifferenceEncoder, MergedIntIterator};
+use crate::utils::buffer_traits::SimpleVarIntReader;
 
 use super::representation::RepresentationUnion;
 
@@ -410,7 +411,7 @@ mod tests {
     use crate::hll::representation::{RepresentationOps, RepresentationUnion};
     use crate::hll::sparse_representation::{DifferenceDecoder, SparseRepresentation};
     use crate::hll::state::State;
-    use crate::utils::{SimpleVarIntReader, VarIntReader};
+    use crate::utils::buffer_traits::{SimpleVarIntReader, VarIntReader};
 
     // Helper to create SparseRepresentation with specific precisions
     fn create_sparse(
@@ -546,23 +547,14 @@ mod tests {
             }
         };
 
-        let final_state = repr.state();
-        assert_eq!(final_state.precision, 10);
-        assert_eq!(final_state.sparse_precision, 13);
+        let state = repr.state();
+        assert_eq!(state.precision, 10);
+        assert_eq!(state.sparse_precision, 13);
+        let reader = SimpleVarIntReader::new(state.sparse_data.as_ref().unwrap());
+        let decoder = DifferenceDecoder::new(reader);
+        let decoded_values: Vec<u32> = decoder.collect();
+        assert_eq!(decoded_values, vec![0b000000000111, 0b10000000000000010]);
 
-        // TODO: Implement downgrade_value and encoding_sparse methods
-        /*
-        let mut expected_downgraded_values = Vec::new();
-        for &val in &sparse_values {
-            expected_downgraded_values
-                 .push(source_encoding.downgrade_value(val, final_state.encoding_sparse()?)?);
-        }
-        expected_downgraded_values.sort_unstable(); // Stored sorted after dedupe
-        assert_sparse_data_equals(
-             final_state.sparse_data.as_ref(),
-             &expected_downgraded_values,
-        )?;
-        */
         Ok(())
     }
 

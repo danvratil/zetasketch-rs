@@ -51,13 +51,6 @@ impl DifferenceEncoder {
         }
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            writer: GrowingVarIntWriter::with_capacity(capacity),
-            last: None,
-        }
-    }
-
     pub fn put_int(&mut self, val: i32) -> Result<(), SketchError> {
         if val < 0 {
             return Err(SketchError::IllegalArgument(
@@ -77,10 +70,6 @@ impl DifferenceEncoder {
 
     pub fn into_vec(self) -> Vec<u8> {
         self.writer.into_vec()
-    }
-
-    pub fn as_slice(&self) -> &[u8] {
-        self.writer.as_slice()
     }
 }
 
@@ -108,7 +97,7 @@ mod tests {
     }
 
     mod difference_decoder {
-        use crate::utils::SimpleVarIntReader;
+        use crate::utils::buffer_traits::SimpleVarIntReader;
 
         use super::*;
 

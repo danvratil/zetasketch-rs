@@ -6,7 +6,7 @@ use assert2::assert;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use zetasketch_java::Zetasketch as JavaZetasketch;
-use zetasketch_rs::{aggregator::Aggregator, HyperLogLogPlusPlus};
+use zetasketch_rs::{Aggregator, HyperLogLogPlusPlus};
 
 #[test]
 fn test_compatibility_with_java_implementation() {
