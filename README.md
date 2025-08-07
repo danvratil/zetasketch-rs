@@ -30,6 +30,12 @@ We are using the [`j4rs`](https://github.com/astonbitecode/j4rs) crate for testi
 which allows to call us the original Java library from our Rust tests and compare
 the behavior of both libraries.
 
+## Sponsorship
+
+Porting the code over from Java to Rust was a fair bit of work that took me a fair
+bit of time. If you find this library useful, please consider donating to help me
+work on other similar projects in the future. Thank you!
+
 ## License
 
 This project is licensed under the MIT license. See the [LICENSE](LICENSE) file
@@ -37,3 +43,5 @@ for details.
 
 The original library is licensed under the Apache License 2.0.
 
+> [!NOTE]
+> This project is in no way affiliated with or endorsed by Google.
