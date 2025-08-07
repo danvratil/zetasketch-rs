@@ -8,7 +8,6 @@
 
 // Replicates com.google.zetasketch.internal.hllplus.SparseRepresentation.java
 
-use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashSet; // For the temporary buffer, Java uses IntOpenCustomHashSet
 
 use itertools::Either;
@@ -25,7 +24,7 @@ use super::representation::RepresentationUnion;
 
 #[derive(Debug, Clone)] // Clone for when state is cloned
 pub struct SparseRepresentation {
-    state: RefCell<State>, // FIXME: Do we really need the refcell?
+    state: State,
     encoding: encoding::Sparse,
     max_sparse_data_bytes: usize,
     max_buffer_elements: usize,
@@ -56,7 +55,7 @@ impl SparseRepresentation {
         }
 
         Ok(SparseRepresentation {
-            state: RefCell::new(state),
+            state,
             encoding: enc,
             max_sparse_data_bytes,
             max_buffer_elements,
@@ -81,7 +80,7 @@ impl SparseRepresentation {
 
     /// Converts this sparse representation to a NormalRepresentation.
     fn normalize(self) -> Result<NormalRepresentation, SketchError> {
-        let normal_repr = NormalRepresentation::new(self.state.borrow().clone())?;
+        let normal_repr = NormalRepresentation::new(self.state.clone())?;
         let normal_repr = match self.merge_into_normal(normal_repr)? {
             RepresentationUnion::Normal(repr) => repr,
             _ => {
@@ -112,8 +111,8 @@ impl SparseRepresentation {
         normal: NormalRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
         let mut normal = normal;
-        if self.state.borrow().has_sparse_data() {
-            if let Some(sparse_data) = &self.state.borrow().sparse_data {
+        if self.state.has_sparse_data() {
+            if let Some(sparse_data) = &self.state.sparse_data {
                 let reader = SimpleVarIntReader::new(sparse_data);
                 let decoder = DifferenceDecoder::new(reader);
                 let repr = normal.add_sparse_values(&self.encoding, Some(decoder))?;
@@ -131,23 +130,24 @@ impl SparseRepresentation {
         normal.add_sparse_values(&self.encoding, Some(self.buffer.clone()))
     }
 
-    fn downgrade(self, encoding: &encoding::Sparse) -> Result<RepresentationUnion, SketchError> {
+    fn downgrade(
+        mut self,
+        encoding: &encoding::Sparse,
+    ) -> Result<RepresentationUnion, SketchError> {
         if encoding >= &self.encoding {
             return Ok(RepresentationUnion::Sparse(self));
         }
 
-        let mut state = self.state.borrow_mut();
-        let original_data = state.sparse_data.take();
-        state.precision = self
+        let original_data = self.state.sparse_data.take();
+        self.state.precision = self
             .encoding
             .normal_precision
             .min(encoding.normal_precision);
-        state.sparse_precision = self
+        self.state.sparse_precision = self
             .encoding
             .sparse_precision
             .min(encoding.sparse_precision);
-        drop(state); // Release the borrow
-        let sparse_repr = SparseRepresentation::new(self.state.borrow().clone())?;
+        let sparse_repr = SparseRepresentation::new(self.state.clone())?;
 
         let repr = if let Some(data) = original_data {
             if !data.is_empty() {
@@ -208,7 +208,7 @@ impl SparseRepresentation {
             self.flush_buffer()?;
         }
 
-        let should_normalize = if let Some(sparse_data_bytes) = &self.state.borrow().sparse_data {
+        let should_normalize = if let Some(sparse_data_bytes) = &self.state.sparse_data {
             sparse_data_bytes.len() > self.max_sparse_data_bytes
         } else {
             false
@@ -222,7 +222,7 @@ impl SparseRepresentation {
     }
 
     fn data_iterator(&self) -> Option<Vec<u32>> {
-        if let Some(sparse_data) = &self.state.borrow().sparse_data {
+        if let Some(sparse_data) = &self.state.sparse_data {
             if !sparse_data.is_empty() {
                 let reader = SimpleVarIntReader::new(sparse_data);
                 let decoder = DifferenceDecoder::new(reader);
@@ -363,8 +363,8 @@ impl RepresentationOps for SparseRepresentation {
             f.as_mut().unwrap().flush_buffer()?;
         }
 
-        let buckets = 1 << self.state.borrow().sparse_precision;
-        let num_zeros = buckets - self.state.borrow().sparse_size;
+        let buckets = 1 << self.state.sparse_precision;
+        let num_zeros = buckets - self.state.sparse_size;
         let estimate = buckets as f64 * ((buckets as f64) / (num_zeros as f64)).ln();
         Ok(estimate.round() as i64)
     }
@@ -387,18 +387,18 @@ impl RepresentationOps for SparseRepresentation {
 
     fn compact(mut self) -> Result<RepresentationUnion, SketchError> {
         self.flush_buffer()?;
-        if self.state.borrow().sparse_data.is_none() {
-            self.state.borrow_mut().sparse_data = Some(Vec::new());
+        if self.state.sparse_data.is_none() {
+            self.state.sparse_data = Some(Vec::new());
         }
         self.update_representation()
     }
 
-    fn state_mut(&mut self) -> RefMut<'_, State> {
-        self.state.borrow_mut()
+    fn state_mut(&mut self) -> &mut State {
+        &mut self.state
     }
 
-    fn state(&self) -> Ref<'_, State> {
-        self.state.borrow()
+    fn state(&self) -> &State {
+        &self.state
     }
 }
 

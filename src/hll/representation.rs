@@ -12,7 +12,6 @@ use crate::error::SketchError;
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::sparse_representation::SparseRepresentation;
 use crate::hll::state::State;
-use std::cell::{Ref, RefMut};
 
 /// Value used to indicate that the sparse representation should not be used.
 pub const SPARSE_PRECISION_DISABLED: i32 = 0;
@@ -58,10 +57,10 @@ pub trait RepresentationOps: std::fmt::Debug {
     fn compact(self) -> Result<RepresentationUnion, SketchError>;
 
     /// Provides mutable access to the underlying state.
-    fn state_mut(&mut self) -> RefMut<'_, State>;
+    fn state_mut(&mut self) -> &mut State;
 
     /// Provides immutable access to the underlying state.
-    fn state(&self) -> Ref<'_, State>;
+    fn state(&self) -> &State;
 }
 
 /// Enum to dispatch calls to the appropriate representation.
@@ -73,7 +72,7 @@ pub enum RepresentationUnion {
 }
 
 impl RepresentationUnion {
-    pub fn state(&self) -> Ref<'_, State> {
+    pub fn state(&self) -> &State {
         match self {
             RepresentationUnion::Normal(n) => n.state(),
             RepresentationUnion::Sparse(s) => s.state(),
@@ -83,7 +82,7 @@ impl RepresentationUnion {
         }
     }
 
-    pub fn state_mut(&mut self) -> RefMut<'_, State> {
+    pub fn state_mut(&mut self) -> &mut State {
         match self {
             RepresentationUnion::Normal(n) => n.state_mut(),
             RepresentationUnion::Sparse(s) => s.state_mut(),
@@ -152,11 +151,11 @@ impl Representation {
         Ok(())
     }
 
-    pub fn state(&self) -> Ref<'_, State> {
+    pub fn state(&self) -> &State {
         self.repr.state()
     }
 
-    pub fn state_mut(&mut self) -> RefMut<'_, State> {
+    pub fn state_mut(&mut self) -> &mut State {
         self.repr.state_mut()
     }
 

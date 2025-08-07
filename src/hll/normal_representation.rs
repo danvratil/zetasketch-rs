@@ -14,16 +14,12 @@ use crate::hll::encoding;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
-
 use super::representation::RepresentationUnion;
 use super::sparse_representation::SparseRepresentation;
 
 #[derive(Debug, Clone)] // Clone for when state is cloned
 pub struct NormalRepresentation {
-    state: RefCell<State>, // FIXME: Do we really need the refcell?
+    state: State,
     encoding: encoding::Normal,
 }
 
@@ -47,10 +43,7 @@ impl NormalRepresentation {
 
         state.sparse_data = None;
         state.sparse_size = 0;
-        Ok(NormalRepresentation {
-            state: RefCell::new(state),
-            encoding,
-        })
+        Ok(NormalRepresentation { state, encoding })
     }
 
     pub fn check_precision(precision: i32) -> Result<(), SketchError> {
@@ -92,33 +85,32 @@ impl NormalRepresentation {
         encoding: &encoding::Normal,
         sparse_precision: i32,
     ) -> Result<(), SketchError> {
-        if self.state.borrow().precision <= encoding.precision
-            && self.state.borrow().sparse_precision <= sparse_precision
+        if self.state.precision <= encoding.precision
+            && self.state.sparse_precision <= sparse_precision
         {
             return Ok(());
         }
 
-        let mut state = self.state.borrow_mut();
-        if state.precision > encoding.precision {
-            let source_data_opt = state.data.take(); // Take ownership
-            state.data = Some(vec![0; 1 << encoding.precision]); // Allocate new data for target precision
-            state.precision = encoding.precision; // Update precision first
+        if self.state.precision > encoding.precision {
+            let source_data_opt = self.state.data.take(); // Take ownership
+            self.state.data = Some(vec![0; 1 << encoding.precision]); // Allocate new data for target precision
+            self.state.precision = encoding.precision; // Update precision first
 
             // Need to create a new target_encoding based on the new self.state.precision
-            let new_target_encoding = encoding::Normal::new(state.precision)?;
+            let new_target_encoding = encoding::Normal::new(self.state.precision)?;
 
             Self::merge_normal_data_maybe_downgrading(
-                &mut state,
+                &mut self.state,
                 &new_target_encoding,
                 source_data_opt,
                 &self.encoding,
             )?;
         }
 
-        state.sparse_precision = state.sparse_precision.min(sparse_precision);
+        self.state.sparse_precision = self.state.sparse_precision.min(sparse_precision);
         // Update self.encoding to match new self.state.precision if it changed
-        if self.encoding.precision != state.precision {
-            self.encoding = encoding::Normal::new(state.precision)?;
+        if self.encoding.precision != self.state.precision {
+            self.encoding = encoding::Normal::new(self.state.precision)?;
         }
         Ok(())
     }
@@ -224,7 +216,7 @@ impl RepresentationOps for NormalRepresentation {
         let idx = self.encoding.index(hash) as usize;
         let rho_w = self.encoding.rho_w(hash);
 
-        let data_slice = Self::get_writeable_data_mut(self.state.get_mut());
+        let data_slice = Self::get_writeable_data_mut(&mut self.state);
 
         if idx < data_slice.len() {
             // Bounds check
@@ -247,7 +239,7 @@ impl RepresentationOps for NormalRepresentation {
         source_sparse_encoding: &crate::hll::encoding::Sparse,
         sparse_value: u32,
     ) -> Result<RepresentationUnion, SketchError> {
-        let state_clone = self.state.get_mut().clone();
+        let state_clone = self.state.clone();
         let mut temp_self = std::mem::replace(&mut self, NormalRepresentation::new(state_clone)?);
         temp_self.maybe_downgrade(
             &source_sparse_encoding.normal(),
@@ -255,7 +247,7 @@ impl RepresentationOps for NormalRepresentation {
         )?;
         self = temp_self;
 
-        let data_slice = Self::get_writeable_data_mut(self.state.get_mut());
+        let data_slice = Self::get_writeable_data_mut(&mut self.state);
         Self::add_sparse_value_maybe_downgrading(
             data_slice,
             &self.encoding,
@@ -271,7 +263,7 @@ impl RepresentationOps for NormalRepresentation {
         source_sparse_encoding: &crate::hll::encoding::Sparse,
         sparse_values: Option<I>,
     ) -> Result<RepresentationUnion, SketchError> {
-        let state_clone = self.state.get_mut().clone();
+        let state_clone = self.state.clone();
         let mut temp_self = std::mem::replace(&mut self, NormalRepresentation::new(state_clone)?);
         temp_self.maybe_downgrade(
             &source_sparse_encoding.normal(),
@@ -283,7 +275,7 @@ impl RepresentationOps for NormalRepresentation {
             return Ok(RepresentationUnion::Normal(self));
         };
 
-        let data_slice = Self::get_writeable_data_mut(self.state.get_mut());
+        let data_slice = Self::get_writeable_data_mut(&mut self.state);
         for sparse_value in sparse_values {
             Self::add_sparse_value_maybe_downgrading(
                 data_slice,
@@ -296,8 +288,7 @@ impl RepresentationOps for NormalRepresentation {
     }
 
     fn estimate(&self) -> Result<i64, SketchError> {
-        let state = self.state.borrow();
-        let data_bytes = match Self::ensure_data(&state) {
+        let data_bytes = match Self::ensure_data(&self.state) {
             Ok(d) => d,
             Err(_) => return Ok(0), // No data, estimate is 0
         };
@@ -314,40 +305,43 @@ impl RepresentationOps for NormalRepresentation {
             // Optimization from Java: sum += 1.0 / (1L << v);
             // Ensure v is within reasonable bounds for bit shift.
             assert!(
-                0 <= v && v <= 65 - state.precision && state.precision >= Self::MINIMUM_PRECISION
+                0 <= v
+                    && v <= 65 - self.state.precision
+                    && self.state.precision >= Self::MINIMUM_PRECISION
             );
             sum += 1.0 / ((1u64 << v) as f64);
         }
 
-        let m = (1 << state.precision) as f64;
+        let m = (1 << self.state.precision) as f64;
 
         if num_zeros > 0 {
-            let linear_count_threshold = data::linear_counting_threshold(state.precision) as f64;
+            let linear_count_threshold =
+                data::linear_counting_threshold(self.state.precision) as f64;
             let h = m * (m / num_zeros as f64).ln();
             if h <= linear_count_threshold {
                 return Ok(h.round() as i64);
             }
         }
 
-        let raw_estimate = data::alpha(state.precision) * m * m / sum;
-        let bias_correction = data::estimate_bias(raw_estimate, state.precision);
+        let raw_estimate = data::alpha(self.state.precision) * m * m / sum;
+        let bias_correction = data::estimate_bias(raw_estimate, self.state.precision);
 
         Ok((raw_estimate - bias_correction).round() as i64)
     }
 
     fn merge_from_normal(
         mut self,
-        other: NormalRepresentation,
+        mut other: NormalRepresentation,
     ) -> Result<RepresentationUnion, SketchError> {
-        let state_clone = self.state.get_mut().clone();
+        let state_clone = self.state.clone();
         let mut temp_self = std::mem::replace(&mut self, NormalRepresentation::new(state_clone)?);
-        temp_self.maybe_downgrade(&other.encoding, other.state.borrow().sparse_precision)?;
+        temp_self.maybe_downgrade(&other.encoding, other.state.sparse_precision)?;
         self = temp_self;
 
         Self::merge_normal_data_maybe_downgrading(
-            self.state.get_mut(),
+            &mut self.state,
             &self.encoding,
-            other.state.borrow_mut().data.take(),
+            other.state.data.take(),
             &other.encoding,
         )?;
 
@@ -365,12 +359,12 @@ impl RepresentationOps for NormalRepresentation {
         Ok(RepresentationUnion::Normal(self)) // Normal representation is already compact
     }
 
-    fn state_mut(&mut self) -> RefMut<'_, State> {
-        self.state.borrow_mut()
+    fn state_mut(&mut self) -> &mut State {
+        &mut self.state
     }
 
-    fn state(&self) -> Ref<'_, State> {
-        self.state.borrow()
+    fn state(&self) -> &State {
+        &self.state
     }
 }
 
