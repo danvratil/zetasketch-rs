@@ -356,15 +356,18 @@ impl RepresentationOps for SparseRepresentation {
     }
 
     fn estimate(&self) -> Result<i64, SketchError> {
-        // Made &mut self due to flush_buffer
-        // FIXME: Do we need flush_buffer()? If so, should be have buffer behind interior mutability?
-        unsafe {
-            let f = self as *const SparseRepresentation as *mut SparseRepresentation;
-            f.as_mut().unwrap().flush_buffer()?;
-        }
-
         let buckets = 1 << self.state.sparse_precision;
-        let num_zeros = buckets - self.state.sparse_size;
+
+        // Calculate total elements without flushing by counting unique elements
+        // across both sparse_data and buffer
+        let total_elements = if let Some(iter) = self.sorted_iter() {
+            // Count unique elements using the same deduplication logic as flush_buffer
+            DedupeIterator::new(iter, self.encoding).count() as i32
+        } else {
+            0
+        };
+
+        let num_zeros = buckets - total_elements;
         let estimate = buckets as f64 * ((buckets as f64) / (num_zeros as f64)).ln();
         Ok(estimate.round() as i64)
     }

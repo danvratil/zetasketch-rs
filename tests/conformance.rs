@@ -31,6 +31,17 @@ fn test_compatibility_with_java_implementation() {
         rust_hll
             .add_u64(value)
             .expect("Failed to add value to Rust HLL");
+
+        if _i % 1000 == 0 {
+            assert_eq!(
+                java_hll
+                    .result()
+                    .expect("Failed to get result from Java HLL"),
+                rust_hll
+                    .result()
+                    .expect("Failed to get result from Rust HLL")
+            );
+        }
     }
 
     assert!(
