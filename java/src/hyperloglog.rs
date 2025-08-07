@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::Error;
 
@@ -12,12 +12,12 @@ use base64::prelude::*;
 use j4rs::{errors::J4RsError, Instance, InvocationArg, Jvm};
 
 pub struct HyperLogLogPlusPlusBuilder {
-    jvm: Arc<Jvm>,
+    jvm: Rc<Jvm>,
     builder: Instance,
 }
 
 impl HyperLogLogPlusPlusBuilder {
-    pub(crate) fn for_jvm(jvm: Arc<Jvm>) -> Result<Self, Error> {
+    pub(crate) fn for_jvm(jvm: Rc<Jvm>) -> Result<Self, Error> {
         let builder = jvm.create_instance(
             "com.google.zetasketch.HyperLogLogPlusPlus$Builder",
             InvocationArg::empty(),
@@ -96,13 +96,13 @@ impl HyperLogLogPlusPlusBuilder {
 }
 
 pub struct HyperLogLogPlusPlus<T> {
-    jvm: Arc<Jvm>,
+    jvm: Rc<Jvm>,
     hll: Instance,
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> HyperLogLogPlusPlus<T> {
-    pub(crate) fn new(jvm: Arc<Jvm>, hll: Instance) -> Self {
+    pub(crate) fn new(jvm: Rc<Jvm>, hll: Instance) -> Self {
         Self {
             jvm,
             hll,
@@ -110,7 +110,7 @@ impl<T> HyperLogLogPlusPlus<T> {
         }
     }
 
-    pub(crate) fn for_proto(jvm: Arc<Jvm>, bytes: &[u8]) -> Result<Self, Error> {
+    pub(crate) fn for_proto(jvm: Rc<Jvm>, bytes: &[u8]) -> Result<Self, Error> {
         let bytes_arg = jvm.create_java_array(
             "byte",
             bytes
