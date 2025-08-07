@@ -346,7 +346,7 @@ mod tests {
         hll.add_str("a").expect("Failed to add str");
 
         let proto = hll
-            .serialize_to_proto()
+            .serialize_to_byte_array()
             .expect("Failed to serialize to proto");
 
         let hll2 = zetasketch
@@ -354,7 +354,8 @@ mod tests {
             .expect("Failed to create builder")
             .build_for_strings()
             .expect("Failed to build HLL");
-        hll2.merge_proto(proto).expect("Failed to merge proto");
+        hll2.merge_proto_bytes(&proto)
+            .expect("Failed to merge proto");
 
         assert!(hll2.result().expect("Failed to get result") == 1);
         hll2.add_str("a").expect("Failed to add str");
