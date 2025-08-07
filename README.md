@@ -5,7 +5,7 @@ A native Rust re-implementation of the
 
 The ZetaSketch library provides an implementation of the HyperLogLog++
 algorithm used by several Google Cloud products, most notably BigQuery and
-BigTable to implement.
+BigTable.
 
 This library allows deserializing, modifying and serializing the HyperLogLog++
 sketches used by these products.
