@@ -46,11 +46,11 @@ pub trait Aggregator<R, A: Aggregator<R, A>> {
     /// Returns the aggregated result of this aggregator.
     fn result(&self) -> Result<R, SketchError>;
 
-    /// Returns the internal state of the aggregator as a serialized string. 
-    /// 
-    /// The returned value can be deserialized into an [`AggregatorStateProto`] 
+    /// Returns the internal state of the aggregator as a serialized string.
+    ///
+    /// The returned value can be deserialized into an [`AggregatorStateProto`]
     /// or passed to [`Aggregator::merge_bytes`].
-    /// 
+    ///
     /// For some aggregators, this may be faster than calling the semantically equivalent
     /// [`Aggregator::serialize_to_proto`] as it permits individual aggregators to implement
     /// performance improvements that do not use the default proto serializer.

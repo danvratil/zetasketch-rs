@@ -6,7 +6,6 @@
 // https://github.com/google/zetasketch
 // Published under the Apache License 2.0
 
-
 use crate::protos::{CustomValueTypeId, DefaultOpsTypeId};
 use protobuf::Enum;
 

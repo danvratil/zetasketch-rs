@@ -6,7 +6,6 @@
 // https://github.com/google/zetasketch
 // Published under the Apache License 2.0
 
-
 // Replicates com.google.zetasketch.internal.hllplus.SparseRepresentation.java
 
 use std::cell::{Ref, RefCell, RefMut};
@@ -19,8 +18,8 @@ use crate::hll::encoding::{self, DedupeIterator};
 use crate::hll::normal_representation::NormalRepresentation;
 use crate::hll::representation::RepresentationOps;
 use crate::hll::state::State;
-use crate::utils::{DifferenceDecoder, DifferenceEncoder, MergedIntIterator};
 use crate::utils::buffer_traits::SimpleVarIntReader;
+use crate::utils::{DifferenceDecoder, DifferenceEncoder, MergedIntIterator};
 
 use super::representation::RepresentationUnion;
 

@@ -8,7 +8,7 @@ use thiserror::Error;
 
 mod hyperloglog;
 
-pub use hyperloglog::{HyperLogLogPlusPlusBuilder, HyperLogLogPlusPlus};
+pub use hyperloglog::{HyperLogLogPlusPlus, HyperLogLogPlusPlusBuilder};
 
 #[derive(Debug, Error)]
 pub enum Error {

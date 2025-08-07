@@ -6,7 +6,6 @@
 // https://github.com/google/zetasketch
 // Published under the Apache License 2.0
 
-
 // Replicates com.google.zetasketch.internal.hllplus.State.java
 // This struct holds the serializable state of the HLL++ sketch.
 

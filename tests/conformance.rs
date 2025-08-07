@@ -83,4 +83,3 @@ fn test_compatibility_with_java_implementation() {
     // TODO: test merging from Java to Rust and vice versa
     // TODO: test merging from Rust to Java and vice versa
 }
-

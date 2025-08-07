@@ -6,7 +6,6 @@
 // https://github.com/google/zetasketch
 // Published under the Apache License 2.0
 
-
 use std::collections::HashSet;
 
 use crate::{
@@ -81,7 +80,7 @@ impl From<Type> for ValueType {
 }
 
 /// HLL++ aggregator for estimating cardinalities of multisets.
-/// 
+///
 /// The aggregator uses the standard format for storing the internal state of the cardinality
 /// estimate as defined in hllplus-unique.proto, allowing users to merge aggregators with data
 /// computed in C++ or Go and to load up the cardinalities in a variety of analysis tools.
@@ -141,7 +140,7 @@ impl HyperLogLogPlusPlus {
     }
 
     /// Creates a new HyperLogLog++ aggregator from the serialized `proto`.
-    /// 
+    ///
     /// The `proto` must be a valid aggregator state of type [`AggregatorType::HYPERLOGLOG_PLUS_UNIQUE`].
     pub fn from_proto(proto: AggregatorStateProto) -> Result<Self, SketchError> {
         let bytes = proto

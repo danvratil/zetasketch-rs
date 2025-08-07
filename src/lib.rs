@@ -33,6 +33,6 @@ mod hyperloglogplusplus;
 pub mod protos;
 pub(crate) mod utils;
 
-pub use hyperloglogplusplus::{HyperLogLogPlusPlus, HyperLogLogPlusPlusBuilder};
 pub use aggregator::Aggregator;
 pub use error::SketchError;
+pub use hyperloglogplusplus::{HyperLogLogPlusPlus, HyperLogLogPlusPlusBuilder};

@@ -117,7 +117,7 @@ impl<T> HyperLogLogPlusPlus<T> {
                 .iter()
                 .map(|b| Ok::<_, J4RsError>(InvocationArg::try_from(*b as i8)?.into_primitive()?))
                 .collect::<Result<Vec<_>, J4RsError>>()?
-                .as_slice()
+                .as_slice(),
         )?;
 
         let hll = jvm.invoke_static(

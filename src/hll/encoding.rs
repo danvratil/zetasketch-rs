@@ -281,7 +281,7 @@ impl Sparse {
     }
 }
 
-/// An iterator that takes a sorted iterator over sparse values and returns a deduplicates indices, 
+/// An iterator that takes a sorted iterator over sparse values and returns a deduplicates indices,
 /// returning only the one with the largest rho(w'). For example, a list of sparse
 /// values with p=4 and sp=7 such as:
 ///

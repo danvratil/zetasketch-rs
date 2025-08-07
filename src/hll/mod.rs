@@ -6,7 +6,6 @@
 // https://github.com/google/zetasketch
 // Published under the Apache License 2.0
 
-
 pub mod data;
 pub mod encoding;
 pub mod hash;
