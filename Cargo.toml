@@ -2,6 +2,18 @@
 name = "zetasketch-rs"
 version = "0.1.0"
 edition = "2021"
+authors = [ "Daniel Vrátil <me@dvratil.cz>" ]
+license = "MIT"
+description = "Rust reimplementation of the ZetaSketch Java library for HyperLogLog++ implementation used by Google BigQuery and BigTable."
+keywords = [ "zetasketch", "hyperloglog", "google", "bigtable", "bigquery", "hll", "sketch" ]
+documentation = "https://docs.rs/zetasketch-rs"
+homepage = "https://crates.io/zetasketch-rs"
+repository = "https://github.com/danvratil/zetasketch-rs"
+readme = "README.md"
+categories = [
+    "algorithms",
+    "data-structures",
+]
 
 [workspace]
 members = [
