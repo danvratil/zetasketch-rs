@@ -160,10 +160,9 @@ impl Representation {
     }
 
     pub fn merge(&mut self, other: Representation) -> Result<(), SketchError> {
-        self.repr = match (
-            std::mem::replace(&mut self.repr, RepresentationUnion::Invalid),
-            other.repr,
-        ) {
+        // FIXME: This is sub-optimal, but it is the only way to prevent the current sketch
+        // from being corrupted if the merge fails mid-way.
+        self.repr = match (self.repr.clone(), other.repr) {
             (RepresentationUnion::Normal(n1), RepresentationUnion::Normal(n2)) => {
                 n1.merge_from_normal(n2)?
             }
