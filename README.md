@@ -30,6 +30,13 @@ We are using the [`j4rs`](https://github.com/astonbitecode/j4rs) crate for testi
 which allows to call us the original Java library from our Rust tests and compare
 the behavior of both libraries.
 
+## Python Bindings
+
+The project also contains Python bindings for the Rust crate published on Pypi as
+[`zetasketch-py`](https://pypi.org/project/zetasketch-py/).
+
+The bindings are generated using [`maturin`](https://github.com/PyO3/maturin).
+
 ## Sponsorship
 
 Porting the code over from Java to Rust was a fair bit of work that took me a fair
