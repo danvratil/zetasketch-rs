@@ -74,16 +74,23 @@ impl PyHyperLogLogPlusPlus {
 
     /// Wrapper for various `HyperLogLogPlusPlus::add_*` overloads.
     pub fn add(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
-        if let Ok(value) = value.extract::<i64>() {
-            self.inner.add_i64(value).map_err(sketch_error_to_pyerr)
+        let result = if let Ok(value) = value.extract::<i64>() {
+            self.inner.add_i64(value)
         } else if let Ok(value) = value.extract::<&str>() {
-            self.inner.add_string(value).map_err(sketch_error_to_pyerr)
+            self.inner.add_string(value)
         } else if let Ok(value) = value.extract::<Vec<u8>>() {
-            self.inner.add_bytes(&value).map_err(sketch_error_to_pyerr)
+            self.inner.add_bytes(&value)
         } else {
-            Err(PyTypeError::new_err(
+            return Err(PyTypeError::new_err(
                 "Unsupported type for HyperLogLogPlusPlus",
-            ))
+            ));
+        };
+
+        match result {
+            Ok(()) => Ok(()),
+            // Explicitly map InvalidState to TypeError for better Python semantics
+            Err(SketchError::InvalidState(msg)) => Err(PyTypeError::new_err(msg)),
+            Err(err) => Err(sketch_error_to_pyerr(err)),
         }
     }
 
