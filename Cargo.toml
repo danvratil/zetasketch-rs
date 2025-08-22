@@ -19,6 +19,7 @@ categories = [
 members = [
     ".",
     "java",
+    "python",
 ]
 
 [dependencies]
