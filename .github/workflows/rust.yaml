@@ -1,17 +1,18 @@
-name: CI
+name: Rust CI
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  ci:
-    name: CI
+  build-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
