@@ -1,8 +1,8 @@
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar, Generic
 
 T = TypeVar("T", str, bytes, int)
 
-class HyperLogLogPlusPlus[T]:
+class HyperLogLogPlusPlus(Generic[T]):
     """
     HLL++ aggregator for estimating cardinalities of multisets.
 
@@ -61,7 +61,7 @@ class HyperLogLogPlusPlus[T]:
         """
         Merge another HyperLogLogPlusPlus aggregator with this one.
 
-        If a bytes object is provided, it is deserialized and merged 
+        If a bytes object is provided, it is deserialized and merged
         with this aggregator.
 
         The other aggregator must be of the same type as this one.

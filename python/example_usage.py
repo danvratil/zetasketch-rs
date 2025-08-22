@@ -9,7 +9,7 @@ a Rust implementation of Google's ZetaSketch HyperLogLog++ algorithm.
 from zetasketch_py import HyperLogLogPlusPlus
 
 
-def main():
+def main() -> None:
     print("🎯 ZetaSketch Python Bindings Example")
     print("=" * 40)
 
@@ -32,7 +32,7 @@ def main():
     print(f"   Serialized size: {len(serialized)} bytes")
 
     # Deserialize
-    hll2 = HyperLogLogPlusPlus.from_bytes(serialized)
+    hll2: HyperLogLogPlusPlus[int] = HyperLogLogPlusPlus.from_bytes(serialized)
     print(f"   Deserialized cardinality: {hll2.result()}")
 
     # Test merging

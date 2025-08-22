@@ -29,6 +29,16 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[dependency-groups]
+test = [
+    "mypy<2",
+    "pytest<9",
+    "pytest-cov<7",
+    "pytest-mypy<2",
+    "pytest-ruff<1",
+    "ruff<1",
+]
+
 [project.urls]
 Homepage = "https://github.com/danvratil/zetasketch-rs"
 Repository = "https://github.com/danvratil/zetasketch-rs"
@@ -37,3 +47,22 @@ Issues = "https://github.com/danvratil/zetasketch-rs/issues"
 
 [tool.maturin]
 module-name = "zetasketch_py"
+
+[tool.pytest.ini_options]
+addopts = """
+  --verbose
+  --ruff
+  --cov --cov-report html
+  --mypy
+  """
+[tool.ruff]
+line-length = 99
+output-format = "full"
+
+[tool.mypy]
+strict = true
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+warn_unused_ignores = true
+

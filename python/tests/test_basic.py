@@ -2,34 +2,34 @@ import pytest
 from zetasketch_py import HyperLogLogPlusPlus
 
 
-def test_new_hll_with_invalid_type_throws():
+def test_new_hll_with_invalid_type_throws() -> None:
     """Test that creating a HyperLogLog++ sketch with an invalid type raises an error."""
     with pytest.raises(ValueError):
-        HyperLogLogPlusPlus(float)  # ignore: type
+        HyperLogLogPlusPlus(float)  # type: ignore[type-var]
 
 
-def test_new_hll_with_default_precisions():
+def test_new_hll_with_default_precisions() -> None:
     """Test that creating a HyperLogLog++ sketch with default precisions works."""
     hll = HyperLogLogPlusPlus(int)
     assert hll.normal_precision == 15
     assert hll.sparse_precision == 20
 
 
-def test_new_hll_with_custom_precisions():
+def test_new_hll_with_custom_precisions() -> None:
     """Test that creating a HyperLogLog++ sketch with custom precisions works."""
     hll = HyperLogLogPlusPlus(int, normal_precision=12, sparse_precision=17)
     assert hll.normal_precision == 12
     assert hll.sparse_precision == 17
 
 
-def test_new_hll_without_sparse_precision():
+def test_new_hll_without_sparse_precision() -> None:
     """Test that creating a HyperLogLog++ sketch without sparse precision uses default."""
     hll = HyperLogLogPlusPlus(int, sparse_precision=None)
     assert hll.normal_precision == 15
     assert hll.sparse_precision == 0
 
 
-def test_basic_functionality():
+def test_basic_functionality() -> None:
     """Test basic HyperLogLog++ functionality."""
     # Create a sketch for integers
     hll = HyperLogLogPlusPlus(int)
@@ -44,7 +44,7 @@ def test_basic_functionality():
     assert 950 <= result <= 1050  # Should be approximately 1000
 
 
-def test_builder_configuration():
+def test_builder_configuration() -> None:
     """Test builder pattern with custom precision."""
     hll = HyperLogLogPlusPlus(str, normal_precision=12, sparse_precision=20)
 
@@ -57,7 +57,7 @@ def test_builder_configuration():
     assert 90 <= result <= 110  # Should be approximately 100
 
 
-def test_bytes_operations():
+def test_bytes_operations() -> None:
     """Test serialization and deserialization."""
     # Create and populate a sketch
     hll1 = HyperLogLogPlusPlus(int)
@@ -70,14 +70,14 @@ def test_bytes_operations():
     assert len(serialized) > 0
 
     # Deserialize from bytes
-    hll2 = HyperLogLogPlusPlus.from_bytes(serialized)
+    hll2: HyperLogLogPlusPlus[int] = HyperLogLogPlusPlus.from_bytes(serialized)
 
     # Both should have same properties
     assert hll1.num_values() == hll2.num_values()
     assert hll1.result() == hll2.result()
 
 
-def test_merge_hll_objects():
+def test_merge_hll_objects() -> None:
     """Test merging sketches."""
     # Create two sketches
     hll1 = HyperLogLogPlusPlus(int)
@@ -97,8 +97,8 @@ def test_merge_hll_objects():
     assert 700 <= result <= 800
 
 
-def test_merge_bytes():
-    """ Test merging serialized sketch."""
+def test_merge_bytes() -> None:
+    """Test merging serialized sketch."""
     # Create two sketches
     hll1 = HyperLogLogPlusPlus(int)
     hll2 = HyperLogLogPlusPlus(int)
@@ -119,7 +119,8 @@ def test_merge_bytes():
     result = hll1.result()
     assert 700 <= result <= 800
 
-def test_string_operations():
+
+def test_string_operations() -> None:
     """Test string-specific operations."""
     hll = HyperLogLogPlusPlus(str)
 
@@ -132,7 +133,7 @@ def test_string_operations():
     assert 180 <= result <= 220
 
 
-def test_bytes_input():
+def test_bytes_input() -> None:
     """Test bytes input operations."""
     hll = HyperLogLogPlusPlus(bytes)
 
@@ -144,7 +145,7 @@ def test_bytes_input():
     assert 130 <= result <= 170
 
 
-def test_repr():
+def test_repr() -> None:
     """Test string representations."""
     hll = HyperLogLogPlusPlus(int)
     hll.add(42)
@@ -154,7 +155,7 @@ def test_repr():
     assert "num_values=" in repr_str
 
 
-def test_error_handling():
+def test_error_handling() -> None:
     """Test error handling."""
     # Test invalid serialized data
     with pytest.raises(Exception):  # Should raise some Python exception

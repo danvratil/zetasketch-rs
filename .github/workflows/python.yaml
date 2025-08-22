@@ -70,8 +70,9 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/bin/activate
+          pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
-          pip install pytest
+          pip install --group test
           pytest
       - name: pytest
         if: ${{ !startsWith(matrix.platform.target, 'x86') && matrix.platform.target != 'ppc64' }}
@@ -83,11 +84,12 @@ jobs:
           install: |
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip pytest
+            pip3 install --upgrade pip
           run: |
             cd python
             set -e
             pip3 install zetasketch-py --find-links dist --force-reinstall
+            pip3 install --group test
             pytest
 
   musllinux:
@@ -145,8 +147,9 @@ jobs:
             apk add py3-pip py3-virtualenv
             python3 -m virtualenv .venv
             source .venv/bin/activate
+            pip install --upgrade pip
             pip install zetasketch-py --no-index --find-links dist --force-reinstall
-            pip install pytest
+            pip install --group test
             pytest
       - name: pytest
         if: ${{ !startsWith(matrix.platform.target, 'x86') }}
@@ -162,8 +165,9 @@ jobs:
             set -e
             python3 -m virtualenv .venv
             source .venv/bin/activate
-            pip install pytest
+            pip install --upgrade pip
             pip install zetasketch-py --find-links dist --force-reinstall
+            pip install --group test
             pytest
 
   windows:
@@ -204,8 +208,9 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/Scripts/activate
+          pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
-          pip install pytest
+          pip install --group test
           pytest
 
   macos:
@@ -243,8 +248,9 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/bin/activate
+          pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
-          pip install pytest
+          pip install --group test
           pytest
 
   sdist:
