@@ -77,7 +77,7 @@ impl<'a> VarIntReader for SimpleVarIntReader<'a> {
     }
 }
 
-/// Simple write buffer that wraps a Vec<u8> with growing capability
+/// Simple write buffer that wraps a `Vec<u8>` with growing capability
 pub struct GrowingVarIntWriter {
     data: Vec<u8>,
 }
