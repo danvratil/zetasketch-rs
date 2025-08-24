@@ -1117,7 +1117,7 @@ dependencies = [
 
 [[package]]
 name = "zetasketch-py"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "pyo3",
  "pyo3-build-config",
@@ -1126,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "zetasketch-rs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "approx",
  "assert2",
