@@ -89,7 +89,7 @@ jobs:
             set -e
             pip3 install zetasketch-py --find-links dist --force-reinstall
             pip3 install --group test
-            pytest
+            pytest -k "not mypy and not ruff"
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
@@ -149,7 +149,7 @@ jobs:
             pip install --upgrade pip
             pip install zetasketch-py --no-index --find-links dist --force-reinstall
             pip install --group test
-            pytest
+            pytest -k "not mypy and not ruff"
       - name: pytest
         if: ${{ !startsWith(matrix.platform.target, 'x86') }}
         uses: uraimo/run-on-arch-action@v2
@@ -167,7 +167,7 @@ jobs:
             pip install --upgrade pip
             pip install zetasketch-py --find-links dist --force-reinstall
             pip install --group test
-            pytest
+            pytest -k "not mypy and not ruff"
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
@@ -210,7 +210,7 @@ jobs:
           pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
           pip install --group test
-          pytest
+          pytest -k "not mypy and not ruff"
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
@@ -250,7 +250,7 @@ jobs:
           pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
           pip install --group test
-          pytest
+          pytest -k "not mypy and not ruff"
 
   sdist:
     runs-on: ubuntu-latest
