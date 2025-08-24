@@ -1,0 +1,68 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "zetasketch-py"
+description = "Python bindings for zetasketch-rs - unofficial Rust reimplementation of the ZetaSketch Java library for HyperLogLog++ implementation used by Google BigQuery and BigTable."
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Daniel Vrátil", email = "me@dvratil.cz" },
+]
+keywords = ["zetasketch", "hyperloglog", "google", "hll", "sketch"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+test = [
+    "mypy<2",
+    "pytest<9",
+    "pytest-cov<7",
+    "pytest-mypy<2",
+    "pytest-ruff<1",
+    "ruff<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/danvratil/zetasketch-rs"
+Repository = "https://github.com/danvratil/zetasketch-rs"
+Documentation = "https://docs.rs/zetasketch-rs"
+Issues = "https://github.com/danvratil/zetasketch-rs/issues"
+
+[tool.maturin]
+module-name = "zetasketch_py"
+
+[tool.pytest.ini_options]
+addopts = """
+  --verbose
+  --ruff
+  --cov --cov-report html
+  --mypy
+  """
+[tool.ruff]
+line-length = 99
+output-format = "full"
+
+[tool.mypy]
+strict = true
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+warn_unused_ignores = true
+

@@ -28,7 +28,7 @@ enum Type {
     Bytes,
 }
 
-impl std::fmt::Debug for Type {
+impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Type::Long => "LONG",
@@ -36,6 +36,12 @@ impl std::fmt::Debug for Type {
             Type::String => "STRING",
             Type::Bytes => "BYTES",
         })
+    }
+}
+
+impl std::fmt::Debug for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
     }
 }
 
@@ -228,9 +234,20 @@ impl HyperLogLogPlusPlus {
     }
 
     fn check_type_and_merge(&mut self, other: HyperLogLogPlusPlus) -> Result<(), SketchError> {
+        let mut new_types = self.allowed_types.clone();
+        new_types.retain(|t| other.allowed_types.contains(t));
+        if new_types.is_empty() {
+            return Err(SketchError::InvalidState(format!(
+                "Aggregator of type {:?} is incompatible with aggregator of type {:?}",
+                self.allowed_types, other.allowed_types
+            )));
+        }
+
         let num_values = other.representation.state().num_values;
         self.representation.merge(other.representation)?;
         self.representation.state_mut().num_values += num_values;
+        // Only updat the allowed  types after a successful merge
+        self.allowed_types = new_types;
         Ok(())
     }
 
