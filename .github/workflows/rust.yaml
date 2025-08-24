@@ -41,7 +41,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --tests --all-targets --all-features -- -D warnings
 
       - name: Install cargo-audit
         uses: baptiste0928/cargo-install@v3
@@ -52,13 +52,13 @@ jobs:
         run: cargo audit
 
       - name: Build
-        run: cargo build --verbose --all-features
+        run: cargo build --verbose --all-features --locked
 
       - name: Run tests
-        run: cargo test --verbose --all-features
+        run: cargo test --verbose --all-features --locked
 
       - name: Check documentation
-        run: cargo doc --no-deps --document-private-items --all-features
+        run: cargo doc --no-deps --document-private-items --all-features --locked
 
   release:
     name: Publish to crates.io
