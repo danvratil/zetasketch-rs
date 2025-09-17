@@ -17,15 +17,15 @@
 //!
 //! The original code is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
-use byteorder::{ByteOrder, LittleEndian};
-
 static K0: i64 = 0xa5b85c5e198ed849u64 as i64;
 static K1: i64 = 0x8d58ac26afe12e47u64 as i64;
 static K2: i64 = 0xc47b6e9e3a970ed3u64 as i64;
 static K3: i64 = 0xc6a4a7935bd1e995u64 as i64;
 
 fn load_64(bytes: &[u8]) -> i64 {
-    LittleEndian::read_i64(&bytes[0..8])
+    let mut buf: [u8; 8] = Default::default();
+    buf.copy_from_slice(&bytes[0..8]);
+    i64::from_le_bytes(buf)
 }
 
 fn load_64_safely(bytes: &[u8]) -> i64 {
