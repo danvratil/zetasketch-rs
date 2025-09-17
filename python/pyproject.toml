@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "zetasketch-py"
 description = "Python bindings for zetasketch-rs - unofficial Rust reimplementation of the ZetaSketch Java library for HyperLogLog++ implementation used by Google BigQuery and BigTable."
+readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
