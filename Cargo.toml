@@ -24,7 +24,6 @@ members = [
 
 [dependencies]
 thiserror = "1.0"
-ordered-float = "5.0"
 protobuf = "3.7"
 itertools = "0.14"
 once_cell = "1.19"
