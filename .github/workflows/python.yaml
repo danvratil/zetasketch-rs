@@ -56,6 +56,7 @@ jobs:
             unzip $PROTOC -d protoc3
             mv -v protoc3/bin/* /usr/local/bin/
             mv -v protoc3/include/* /usr/local/include/
+            rm -rf $PROTOC protoc3
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -129,6 +130,7 @@ jobs:
             unzip $PROTOC -d protoc3
             mv -v protoc3/bin/* /usr/local/bin/
             mv -v protoc3/include/* /usr/local/include/
+            rm -rf $PROTOC protoc3
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -270,6 +272,7 @@ jobs:
             unzip $PROTOC -d protoc3
             sudo mv -v protoc3/bin/* /usr/local/bin/
             sudo mv -v protoc3/include/* /usr/local/include/
+            rm -rf $PROTOC protoc3
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
