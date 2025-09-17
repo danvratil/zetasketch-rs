@@ -10,7 +10,6 @@
 //! Replicates com.google.zetasketch.internal.hllplus.Data.java
 
 use once_cell::sync::Lazy;
-use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 // Smallest precision for which thresholds and bias corrections are precisely defined.
@@ -22,7 +21,7 @@ pub const MAXIMUM_PRECISION: i32 = 18;
 const NUMBER_OF_NEIGHBORS_IN_KNN: usize = 6;
 
 // Means of the bias corrections.
-static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
+static MEAN_DATA: Lazy<[Vec<f64>; 9]> = Lazy::new(|| {
     [
         // prec 10
         vec![
@@ -51,10 +50,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             4504.8116, 4528.8928, 4553.9584, 4578.8712, 4603.8384, 4632.3872, 4655.5128, 4675.821,
             4704.6222, 4731.9862, 4755.4174, 4781.2628, 4804.332, 4832.3048, 4862.8752, 4883.4148,
             4906.9544, 4935.3516, 4954.3532, 4984.0248, 5011.217, 5035.3258, 5057.3672, 5084.1828,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 11
         vec![
             1477.0, 1501.6014, 1526.5802, 1551.7942, 1577.3042, 1603.2062, 1629.8402, 1656.2292,
@@ -83,10 +79,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             9419.7126, 9474.3722, 9520.1338, 9572.368, 9622.7702, 9675.8448, 9726.5396, 9778.7378,
             9827.6554, 9878.1922, 9928.7782, 9978.3984, 10026.578, 10076.5626, 10137.1618,
             10177.5244, 10229.9176,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 12
         vec![
             2954.0, 3003.4782, 3053.3568, 3104.3666, 3155.324, 3206.9598, 3259.648, 3312.539,
@@ -116,10 +109,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             18426.6276, 18525.0932, 18629.8976, 18733.2588, 18831.0466, 18940.1366, 19032.2696,
             19131.729, 19243.4864, 19349.6932, 19442.866, 19547.9448, 19653.2798, 19754.4034,
             19854.0692, 19965.1224, 20065.1774, 20158.2212, 20253.353, 20366.3264, 20463.22,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 13
         vec![
             5908.5052, 6007.2672, 6107.347, 6208.5794, 6311.2622, 6414.5514, 6519.3376, 6625.6952,
@@ -150,10 +140,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             36630.7764, 36833.3102, 37048.6728, 37247.3916, 37453.5904, 37669.3614, 37854.5526,
             38059.305, 38268.0936, 38470.2516, 38674.7064, 38876.167, 39068.3794, 39281.9144,
             39492.8566, 39684.8628, 39898.4108, 40093.1836, 40297.6858, 40489.7086, 40717.2424,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 14
         vec![
             11817.475, 12015.0046, 12215.3792, 12417.7504, 12623.1814, 12830.0086, 13040.0072,
@@ -185,10 +172,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             74521.2122, 74933.6814, 75341.5904, 75743.0244, 76166.0278, 76572.1322, 76973.1028,
             77381.6284, 77800.6092, 78189.328, 78607.0962, 79012.2508, 79407.8358, 79825.725,
             80238.701, 80646.891, 81035.6436, 81460.0448, 81876.3884,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 15
         vec![
             23635.0036,
@@ -392,10 +376,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             162093.3114,
             162918.542,
             163729.2842,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 16
         vec![
             47271.0,
@@ -598,10 +579,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             322566.3364,
             324228.4224,
             325847.1542,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 17
         vec![
             94542.0,
@@ -805,10 +783,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             648441.546,
             651666.252,
             654941.845,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
         // prec 18
         vec![
             189084.0,
@@ -1011,10 +986,7 @@ static MEAN_DATA: Lazy<[Vec<OrderedFloat<f64>>; 9]> = Lazy::new(|| {
             1290211.514,
             1296858.568,
             1303455.691,
-        ]
-        .into_iter()
-        .map(OrderedFloat)
-        .collect::<Vec<_>>(),
+        ],
     ]
 });
 
@@ -2890,11 +2862,13 @@ fn closest_bias(estimate: f64, precision: i32) -> Vec<WeightedBias> {
     let biases = &(*BIAS_DATA)[(precision - MINIMUM_PRECISION) as usize];
     let means = &(*MEAN_DATA)[(precision - MINIMUM_PRECISION) as usize];
 
-    if OrderedFloat(estimate) < means[0] || means[means.len() - 1] < OrderedFloat(estimate) {
+    if estimate.total_cmp(&means[0]) == Ordering::Less
+        || means[means.len() - 1].total_cmp(&estimate) == Ordering::Less
+    {
         return vec![];
     }
 
-    let index = match means.binary_search(&OrderedFloat(estimate)) {
+    let index = match means.binary_search_by(|a| a.total_cmp(&estimate)) {
         Ok(idx) => idx,
         Err(idx) => idx + 1,
     };
@@ -2916,7 +2890,7 @@ fn closest_bias(estimate: f64, precision: i32) -> Vec<WeightedBias> {
         })
         .collect::<Vec<_>>();
 
-    result.sort_by_key(|bias| OrderedFloat(bias.distance));
+    result.sort_by(|a, b| a.distance.total_cmp(&b.distance));
     result.truncate(NUMBER_OF_NEIGHBORS_IN_KNN);
     result
 }
