@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directories:
+      - "/"
+      - "/java"
+      - "/python"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: all
+    groups:
+      rust-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directory: "/python"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: all
+    groups:
+      python-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
+
