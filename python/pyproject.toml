@@ -34,7 +34,7 @@ dynamic = ["version"]
 test = [
     "mypy<2",
     "pytest<9",
-    "pytest-cov<7",
+    "pytest-cov<8",
     "pytest-mypy<2",
     "pytest-ruff<1",
     "ruff<1",
