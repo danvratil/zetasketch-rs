@@ -23,7 +23,6 @@ members = [
 ]
 
 [dependencies]
-byteorder = "1"
 thiserror = "1.0"
 ordered-float = "5.0"
 protobuf = "3.7"
