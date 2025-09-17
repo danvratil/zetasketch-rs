@@ -1016,7 +1016,6 @@ dependencies = [
  "approx",
  "assert2",
  "itertools",
- "once_cell",
  "protobuf",
  "protobuf-codegen",
  "rand",

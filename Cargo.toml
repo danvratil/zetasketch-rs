@@ -26,7 +26,6 @@ members = [
 thiserror = "1.0"
 protobuf = "3.7"
 itertools = "0.14"
-once_cell = "1.19"
 
 [build-dependencies]
 protobuf-codegen = "3.7"
