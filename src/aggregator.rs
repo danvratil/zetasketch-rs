@@ -56,7 +56,7 @@ pub trait Aggregator<R, A: Aggregator<R, A>> {
     /// performance improvements that do not use the default proto serializer.
     fn serialize_to_bytes(self) -> Result<Vec<u8>, SketchError>;
 
-    /// Returns the internal state of the aggregator as a protocol bugger.
+    /// Returns the internal state of the aggregator as a protocol buffer.
     ///
     /// The returned value can be passed in to [`Aggregator::merge_proto`].
     ///

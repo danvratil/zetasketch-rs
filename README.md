@@ -27,7 +27,7 @@ that for identical inputs, it should produce 100% identical sketches as the
 Java library. Any deviation should be considered a bug.
 
 We are using the [`j4rs`](https://github.com/astonbitecode/j4rs) crate for testing,
-which allows to call us the original Java library from our Rust tests and compare
+which allows us to call the original Java library from our Rust tests and compare
 the behavior of both libraries.
 
 ## Python Bindings

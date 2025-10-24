@@ -21,7 +21,7 @@
 //! ## Usage
 //!
 //! To decode an existing sketch, you can use [`HyperLogLogPlusPlus::from_bytes`].
-//! To create a branch new sketch, you can use the [`HyperLogLogPlusPlusBuilder`].
+//! To create a brand new sketch, you can use the [`HyperLogLogPlusPlusBuilder`].
 //! See documentation for each of the classes for more details.
 
 mod fingerprint2011;
