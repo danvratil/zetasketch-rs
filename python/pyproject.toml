@@ -41,10 +41,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/danvratil/zetasketch-rs"
-Repository = "https://github.com/danvratil/zetasketch-rs"
+Homepage = "https://codeberg.org/danvratil/zetasketch-rs"
+Repository = "https://codeberg.org/danvratil/zetasketch-rs"
 Documentation = "https://docs.rs/zetasketch-rs"
-Issues = "https://github.com/danvratil/zetasketch-rs/issues"
+Issues = "https://codeberg.org/danvratil/zetasketch-rs/issues"
 
 [tool.maturin]
 module-name = "zetasketch_py"

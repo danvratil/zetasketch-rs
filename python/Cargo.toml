@@ -6,9 +6,9 @@ authors = [ "Daniel Vrátil <me@dvratil.cz>" ]
 license = "MIT"
 description = "Python bindings for zetasketch-rs - Rust reimplementation of the ZetaSketch Java library for HyperLogLog++ implementation used by Google BigQuery and BigTable."
 keywords = [ "zetasketch", "hyperloglog", "google", "hll", "sketch", "python" ]
-documentation = "https://docs.rs/zetasketch-py"
-homepage = "https://crates.io/crates/zetasketch-py"
-repository = "https://github.com/danvratil/zetasketch-rs"
+documentation = "https://docs.rs/zetasketch-rs"
+homepage = "https://codeberg.org/danvratil/zetasketch-rs"
+repository = "https://codeberg.org/danvratil/zetasketch-rs"
 readme = "../README.md"
 categories = [
     "algorithms",

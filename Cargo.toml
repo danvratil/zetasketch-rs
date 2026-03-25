@@ -8,7 +8,7 @@ description = "Rust reimplementation of the ZetaSketch Java library for HyperLog
 keywords = [ "zetasketch", "hyperloglog", "google", "hll", "sketch" ]
 documentation = "https://docs.rs/zetasketch-rs"
 homepage = "https://crates.io/crates/zetasketch-rs"
-repository = "https://github.com/danvratil/zetasketch-rs"
+repository = "https://codeberg.org/danvratil/zetasketch-rs"
 readme = "README.md"
 categories = [
     "algorithms",
