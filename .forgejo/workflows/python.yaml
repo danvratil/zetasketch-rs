@@ -1,0 +1,44 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  trigger-github-ci:
+    name: Trigger GitHub CI
+    runs-on: docker
+    steps:
+      - name: Determine event details
+        id: event
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "commit_sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=" >> $GITHUB_OUTPUT
+            echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger GitHub Action
+        run: |
+          echo "Triggering GitHub CI for commit ${{ steps.event.outputs.commit_sha }}"
+
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.ZETASKETCH_GITHUB_API_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/danvratil/zetasketch-rs/actions/workflows/python.yaml/dispatches \
+            -d '{"ref":"codeberg-migration","inputs":{"forgejo_commit_sha":"${{ steps.event.outputs.commit_sha }}"}}' \
+            --fail
+
+      - name: Log trigger information
+        run: |
+          echo "GitHub CI triggered successfully"
+          echo "Commit: ${{ steps.event.outputs.commit_sha }}"
+          echo "Check GitHub Actions: https://github.com/danvratil/zetasketch-rs/actions"
