@@ -24,7 +24,7 @@ fn sketch_error_to_pyerr(err: SketchError) -> PyErr {
 }
 
 /// Wrapper for the Rust HyperLogLogPlusPlus aggregator.
-#[pyclass(name = "HyperLogLogPlusPlus")]
+#[pyclass(name = "HyperLogLogPlusPlus", from_py_object)]
 #[derive(Clone)]
 pub struct PyHyperLogLogPlusPlus {
     inner: RustHyperLogLogPlusPlus,
