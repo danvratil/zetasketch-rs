@@ -7,8 +7,10 @@ use std::rc::Rc;
 use thiserror::Error;
 
 mod hyperloglog;
+mod jassets;
 
 pub use hyperloglog::{HyperLogLogPlusPlus, HyperLogLogPlusPlusBuilder};
+pub use jassets::{deploy_maven_artifacts, ensure_j4rs_base_path};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -16,6 +18,8 @@ pub enum Error {
     JavaError(#[from] j4rs::errors::J4RsError),
     #[error("Proto error: {0}")]
     ProtoError(#[from] protobuf::Error),
+    #[error("{0}")]
+    Setup(String),
 }
 
 pub struct Zetasketch {
@@ -24,12 +28,16 @@ pub struct Zetasketch {
 
 impl Zetasketch {
     pub fn new() -> Result<Self, Error> {
+        let base = ensure_j4rs_base_path()?;
         let jvm = JvmBuilder::new()
+            .with_base_path(&base)
+            .java_opt(JavaOpt::new("-XX:+IgnoreUnrecognizedVMOptions"))
             .java_opt(JavaOpt::new("--illegal-access=warn"))
+            .java_opt(JavaOpt::new("--enable-native-access=ALL-UNNAMED"))
             .build()?;
+        deploy_maven_artifacts(&jvm)?;
 
-        let rc_jvm = Rc::new(jvm);
-        Ok(Self { jvm: rc_jvm })
+        Ok(Self { jvm: Rc::new(jvm) })
     }
 
     pub fn builder(&self) -> Result<HyperLogLogPlusPlusBuilder, Error> {

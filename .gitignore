@@ -6,6 +6,7 @@
 
 # Rust
 /target
+**/jassets/
 
 # Python
 .venv
