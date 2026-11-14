@@ -4,7 +4,7 @@
 
 use assert2::assert;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use zetasketch_java::Zetasketch as JavaZetasketch;
 use zetasketch_rs::{Aggregator, HyperLogLogPlusPlus};
 

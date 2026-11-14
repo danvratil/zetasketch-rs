@@ -428,7 +428,7 @@ mod tests {
                 panic!("bound must be positive");
             }
 
-            if (bound & -bound) == bound {
+            if bound.isolate_lowest_one() == bound {
                 // Power of 2 - use bit masking
                 return ((bound as i64 * self.next(31) as i64) >> 31) as i32;
             }
