@@ -129,17 +129,17 @@ class TestAddMethodAPI:
 
         # Int HLL should reject non-ints
         with pytest.raises(TypeError, match="Unable to add type STRING"):
-            hll_int.add("string") # type: ignore[arg-type]
+            hll_int.add("string")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match="Unable to add type BYTES"):
-            hll_int.add(b"bytes")   # type: ignore[arg-type]
+            hll_int.add(b"bytes")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match="Unsupported type"):
-            hll_int.add(3.14)    # type: ignore[arg-type]
+            hll_int.add(3.14)  # type: ignore[arg-type]
 
         # String HLL should reject integers (but accepts bytes)
         with pytest.raises(TypeError, match="Unable to add type LONG"):
-            hll_str.add(123)    # type: ignore[arg-type]
+            hll_str.add(123)  # type: ignore[arg-type]
         with pytest.raises(TypeError, match="Unsupported type"):
-            hll_str.add(3.14)   # type: ignore[arg-type]
+            hll_str.add(3.14)  # type: ignore[arg-type]
 
         # Bytes should work with string HLL, but not really exposed through type system
         hll_str.add(b"bytes")  # type: ignore[arg-type]
@@ -156,7 +156,7 @@ class TestAddMethodAPI:
     def test_add_returns_none(self) -> None:
         """Test that add() returns None."""
         hll = HyperLogLogPlusPlus(int)
-        result = hll.add(42) # type: ignore[func-returns-value]
+        result = hll.add(42)  # type: ignore[func-returns-value]
         assert result is None
 
 
@@ -204,13 +204,11 @@ class TestMergeMethodAPI:
         hll = HyperLogLogPlusPlus(int)
 
         with pytest.raises(TypeError, match="Unsupported type.*merge"):
-            hll.merge("string") # type: ignore[arg-type]
+            hll.merge("string")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match="Unsupported type.*merge"):
             hll.merge(123)  # type: ignore[arg-type]
-        with pytest.raises(
-            RuntimeError, match="ZetaSketch error.*Proto deserialization"
-        ):
-            hll.merge([1, 2, 3]) # type: ignore[arg-type]
+        with pytest.raises(RuntimeError, match="ZetaSketch error.*Proto deserialization"):
+            hll.merge([1, 2, 3])  # type: ignore[arg-type]
 
     def test_merge_returns_none(self) -> None:
         """Test that merge() returns None."""
@@ -219,7 +217,7 @@ class TestMergeMethodAPI:
         hll1.add(1)
         hll2.add(2)
 
-        result = hll1.merge(hll2) # type: ignore[func-returns-value]
+        result = hll1.merge(hll2)  # type: ignore[func-returns-value]
         assert result is None
 
 

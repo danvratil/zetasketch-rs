@@ -242,7 +242,9 @@ class TestIntegrationWithPythonEcosystem:
         from collections import defaultdict
 
         # Using HLL in a defaultdict
-        hll_dict: defaultdict[str, HyperLogLogPlusPlus[int]] = defaultdict(lambda: HyperLogLogPlusPlus(int))
+        hll_dict: defaultdict[str, HyperLogLogPlusPlus[int]] = defaultdict(
+            lambda: HyperLogLogPlusPlus(int)
+        )
 
         # Add data to different HLLs
         for category in ["A", "B", "C"]:

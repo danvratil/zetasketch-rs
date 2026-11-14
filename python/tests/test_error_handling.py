@@ -17,14 +17,14 @@ class TestConstructorErrorHandling:
         """Test constructor with invalid type parameter."""
 
         with pytest.raises(TypeError):
-            HyperLogLogPlusPlus(invalid_type) # type: ignore[arg-type]
+            HyperLogLogPlusPlus(invalid_type)  # type: ignore[arg-type]
 
     @pytest.mark.parametrize("precision", [-1, 0, 3, 25, 3.14, "15", None])
     def test_invalid_precision_values(self, precision: object) -> None:
         """Test constructor with invalid precision values."""
 
         with pytest.raises((ValueError, TypeError)):
-            HyperLogLogPlusPlus(int, normal_precision=precision) # type: ignore[arg-type]
+            HyperLogLogPlusPlus(int, normal_precision=precision)  # type: ignore[arg-type]
 
     @pytest.mark.parametrize("precision", [-1, 3.14, "20"])
     def test_invalid_sparse_precision_values(self, precision: object) -> None:
@@ -41,7 +41,7 @@ class TestConstructorErrorHandling:
     def test_unknown_keyword_arguments(self) -> None:
         """Test constructor with unknown keyword arguments."""
         with pytest.raises(TypeError):
-            HyperLogLogPlusPlus(int, unknown_param=42) # type: ignore[call-arg]
+            HyperLogLogPlusPlus(int, unknown_param=42)  # type: ignore[call-arg]
 
 
 class TestSerializationErrorHandling:
@@ -77,32 +77,30 @@ class TestSerializationErrorHandling:
         """Test from_bytes with wrong input types."""
 
         with pytest.raises((TypeError, ValueError)):
-            HyperLogLogPlusPlus.from_bytes(invalid_input) # type: ignore[arg-type]
+            HyperLogLogPlusPlus.from_bytes(invalid_input)  # type: ignore[arg-type]
 
     def test_from_bytes_without_arguments(self) -> None:
         """Test from_bytes called without arguments."""
         with pytest.raises(TypeError):
-            HyperLogLogPlusPlus.from_bytes() # type: ignore[call-arg]
+            HyperLogLogPlusPlus.from_bytes()  # type: ignore[call-arg]
 
     def test_from_bytes_with_too_many_arguments(self) -> None:
         """Test from_bytes called with too many arguments."""
         with pytest.raises(TypeError):
-            HyperLogLogPlusPlus.from_bytes(b"data1", b"data2") # type: ignore[call-arg]
+            HyperLogLogPlusPlus.from_bytes(b"data1", b"data2")  # type: ignore[call-arg]
 
 
 class TestMergeErrorHandling:
     """Test error handling in merge operations."""
 
-    @pytest.mark.parametrize(
-        "invalid_input", ["string", 123, 3.14, [], {}, None, set()]
-    )
+    @pytest.mark.parametrize("invalid_input", ["string", 123, 3.14, [], {}, None, set()])
     def test_merge_with_invalid_types(self, invalid_input: object) -> None:
         """Test merge with various invalid types."""
         hll = HyperLogLogPlusPlus(int)
         hll.add(42)
 
         with pytest.raises((TypeError, RuntimeError)):
-            hll.merge(invalid_input) # type: ignore[arg-type]
+            hll.merge(invalid_input)  # type: ignore[arg-type]
 
     def test_merge_sketches_with_incompatible_precision(self) -> None:
         """Test merging sketches with incompatible precisions."""
@@ -128,16 +126,12 @@ class TestMergeErrorHandling:
         hll_int.add(42)
         hll_str.add("hello")
 
-        with pytest.raises(
-            RuntimeError, match="Aggregator of type {LONG} is incompatible.*"
-        ):
-            hll_int.merge(hll_str) # type: ignore[arg-type]
+        with pytest.raises(RuntimeError, match="Aggregator of type {LONG} is incompatible.*"):
+            hll_int.merge(hll_str)  # type: ignore[arg-type]
 
         # Also test merging serialized incompatible sketch
         serialized_str = hll_str.to_bytes()
-        with pytest.raises(
-            RuntimeError, match="Aggregator of type {LONG} is incompatible.*"
-        ):
+        with pytest.raises(RuntimeError, match="Aggregator of type {LONG} is incompatible.*"):
             hll_int.merge(serialized_str)
 
     def test_merge_without_arguments(self) -> None:
@@ -145,7 +139,7 @@ class TestMergeErrorHandling:
         hll = HyperLogLogPlusPlus(int)
 
         with pytest.raises(TypeError):
-            hll.merge() # type: ignore[call-arg]
+            hll.merge()  # type: ignore[call-arg]
 
     def test_merge_with_too_many_arguments(self) -> None:
         """Test merge called with too many arguments."""
@@ -153,7 +147,7 @@ class TestMergeErrorHandling:
         hll2 = HyperLogLogPlusPlus(int)
 
         with pytest.raises(TypeError):
-            hll1.merge(hll2, hll2) # type: ignore[call-arg]
+            hll1.merge(hll2, hll2)  # type: ignore[call-arg]
 
 
 class TestAddErrorHandling:
@@ -164,14 +158,14 @@ class TestAddErrorHandling:
         hll = HyperLogLogPlusPlus(int)
 
         with pytest.raises(TypeError):
-            hll.add() # type: ignore[call-arg]
+            hll.add()  # type: ignore[call-arg]
 
     def test_add_with_too_many_arguments(self) -> None:
         """Test add called with too many arguments."""
         hll = HyperLogLogPlusPlus(int)
 
         with pytest.raises(TypeError):
-            hll.add(1, 2) # type: ignore[call-arg]
+            hll.add(1, 2)  # type: ignore[call-arg]
 
     def test_add_with_complex_invalid_types(self) -> None:
         """Test add with complex invalid types."""
@@ -189,7 +183,7 @@ class TestAddErrorHandling:
         for invalid_value in invalid_values:
             try:
                 with pytest.raises((TypeError, RuntimeError)):
-                    hll.add(invalid_value) # type: ignore[arg-type]
+                    hll.add(invalid_value)  # type: ignore[arg-type]
             except Exception:
                 # Some complex types might not even be convertible
                 pass
@@ -217,10 +211,10 @@ class TestPropertyAccessErrors:
         hll = HyperLogLogPlusPlus(int)
 
         with pytest.raises(AttributeError):
-            _ = hll.nonexistent_property # type: ignore[attr-defined]
+            _ = hll.nonexistent_property  # type: ignore[attr-defined]
 
         with pytest.raises(AttributeError):
-            hll.another_fake_property = 42 # type: ignore[attr-defined]
+            hll.another_fake_property = 42  # type: ignore[attr-defined]
 
 
 class TestEdgeCases:
