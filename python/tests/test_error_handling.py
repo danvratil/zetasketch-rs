@@ -6,6 +6,7 @@ to ensure robust error handling in the Python bindings.
 """
 
 import pytest
+
 from zetasketch_py import HyperLogLogPlusPlus
 
 
@@ -177,7 +178,7 @@ class TestAddErrorHandling:
             (1, 2, 3),  # Tuple
             {1, 2, 3},  # Set
             lambda x: x,  # Function
-            open(__file__),  # File object (will be cleaned up)
+            open(__file__),  # noqa: SIM115  # File object (will be cleaned up)
         ]
 
         for invalid_value in invalid_values:

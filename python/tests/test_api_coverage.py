@@ -3,6 +3,7 @@ API coverage tests for Python bindings.
 """
 
 import pytest
+
 from zetasketch_py import HyperLogLogPlusPlus
 
 
@@ -115,7 +116,7 @@ class TestAddMethodAPI:
         hll.add(b"hello")
         hll.add(b"")  # Empty bytes
         hll.add(b"\x00\x01\x02\x03")  # Binary data
-        hll.add("café".encode("utf-8"))  # Encoded string
+        hll.add("café".encode())  # Encoded string
         hll.add(bytes(range(256)))  # All byte values
 
         assert hll.num_values() == 5

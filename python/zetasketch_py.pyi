@@ -1,8 +1,10 @@
-from typing_extensions import TypeVar, Generic
+from typing import Generic
 
-T = TypeVar("T", str, bytes, int)
+from typing_extensions import TypeVar
 
-class HyperLogLogPlusPlus(Generic[T]):
+_T = TypeVar("_T", str, bytes, int)
+
+class HyperLogLogPlusPlus(Generic[_T]):
     """
     HLL++ aggregator for estimating cardinalities of multisets.
 
@@ -25,7 +27,7 @@ class HyperLogLogPlusPlus(Generic[T]):
 
     def __init__(
         self,
-        ty: type[T],
+        ty: type[_T],
         normal_precision: int = 14,
         sparse_precision: int | None = 12,
     ) -> None:
@@ -39,7 +41,7 @@ class HyperLogLogPlusPlus(Generic[T]):
         """
 
     @staticmethod
-    def from_bytes(data: bytes) -> "HyperLogLogPlusPlus[T]":
+    def from_bytes(data: bytes) -> HyperLogLogPlusPlus[_T]:
         """
         Create a new HyperLogLogPlusPlus aggregator from a serialized state.
 
@@ -49,7 +51,7 @@ class HyperLogLogPlusPlus(Generic[T]):
             data: The serialized state of the aggregator.
         """
 
-    def add(self, value: T) -> None:
+    def add(self, value: _T) -> None:
         """
         Add a value to the aggregator.
 
@@ -57,7 +59,7 @@ class HyperLogLogPlusPlus(Generic[T]):
             value: The value to add to the aggregator.
         """
 
-    def merge(self, other: "HyperLogLogPlusPlus[T]" | bytes) -> None:
+    def merge(self, other: HyperLogLogPlusPlus[_T] | bytes) -> None:
         """
         Merge another HyperLogLogPlusPlus aggregator with this one.
 
@@ -88,7 +90,3 @@ class HyperLogLogPlusPlus(Generic[T]):
         Use `from_bytes` to re-construct the aggregator from the serialized state.
         """
 
-    def __repr__(self) -> str:
-        """
-        Get the string representation of the aggregator.
-        """

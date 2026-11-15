@@ -1,4 +1,5 @@
 import pytest
+
 from zetasketch_py import HyperLogLogPlusPlus
 
 
@@ -138,7 +139,7 @@ def test_bytes_input() -> None:
     hll = HyperLogLogPlusPlus(bytes)
 
     for i in range(150):
-        hll.add(f"bytes_data_{i}".encode("utf-8"))
+        hll.add(f"bytes_data_{i}".encode())
 
     assert hll.num_values() == 150
     result = hll.result()

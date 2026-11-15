@@ -60,6 +60,9 @@ addopts = """
 line-length = 99
 output-format = "full"
 
+[tool.ruff.lint]
+ignore = ["BLE001", "S110", "B017"]
+
 [tool.mypy]
 strict = true
 mypy_path = "src"

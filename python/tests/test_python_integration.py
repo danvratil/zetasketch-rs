@@ -6,10 +6,11 @@ and integration with Python standard library features.
 """
 
 import gc
-import pytest
-import sys
 import threading
 import weakref
+
+import pytest
+
 from zetasketch_py import HyperLogLogPlusPlus
 
 
@@ -211,7 +212,7 @@ class TestConcurrencyBehavior:
             pytest.fail(f"Thread errors: {errors}")
 
         assert len(results) == 4
-        for _, result in results.items():
+        for result in results.values():
             assert 90 <= result <= 110  # Each thread should have ~100 unique values
 
 
@@ -223,13 +224,11 @@ class TestPythonVersionCompatibility:
         hll = HyperLogLogPlusPlus(int)
 
         # Test with different integer types available in different Python versions
-        if sys.version_info >= (3, 8):
-            # Python 3.8+ features
-            hll.add(42)
+        hll.add(42)
 
         # Features available in all supported versions
-        hll.add(int(42))
-        hll.add(int(-42))
+        hll.add(42)
+        hll.add(-42)
 
         assert hll.num_values() >= 1
 
@@ -270,8 +269,8 @@ class TestIntegrationWithPythonEcosystem:
 
     def test_with_json_serialization(self) -> None:
         """Test serializing HLL data with JSON."""
-        import json
         import base64
+        import json
 
         hll = HyperLogLogPlusPlus(int)
         for i in range(100):
