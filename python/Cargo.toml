@@ -24,5 +24,3 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.30", features = ["extension-module"] }
 zetasketch-rs = { path = ".." }
 
-[build-dependencies]
-pyo3-build-config = "0.30"
