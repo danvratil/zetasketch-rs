@@ -10,7 +10,7 @@
 //! clean `target/` (or a deleted `jassets/`) therefore used to fail in our
 //! `build.rs` with `Can not find jassets directory` before any Maven fetch.
 //!
-//! We create `jassets` ourselves next to the test/bench binary, copy the
+//! We create a profile-wide `jassets` directory, copy the
 //! bundled j4rs jar out of the cargo registry if needed, and download the
 //! ZetaSketch artifacts when the JVM is first created.
 
@@ -62,12 +62,27 @@ pub fn deploy_maven_artifacts(jvm: &Jvm) -> Result<(), Error> {
 fn infer_profile_dir() -> Result<PathBuf, Error> {
     let exe =
         std::env::current_exe().map_err(|e| Error::Setup(format!("current_exe failed: {e}")))?;
+    profile_dir_from_exe(&exe)
+}
+
+fn profile_dir_from_exe(exe: &Path) -> Result<PathBuf, Error> {
     let mut dir = exe
         .parent()
         .ok_or_else(|| Error::Setup(format!("{} has no parent", exe.display())))?
         .to_path_buf();
-    // `cargo test` binaries live in `target/<profile>/deps/`.
-    if dir
+    // j4rs copies test binaries into `target/<profile>/build/<crate>/<hash>/out`.
+    // Keep their jars in the same profile directory as ordinary test binaries.
+    if dir.file_name().is_some_and(|n| n == "out")
+        && dir
+            .parent()
+            .and_then(Path::parent)
+            .and_then(Path::parent)
+            .is_some_and(|p| p.file_name().is_some_and(|n| n == "build"))
+    {
+        for _ in 0..4 {
+            dir.pop();
+        }
+    } else if dir
         .file_name()
         .is_some_and(|n| n == "deps" || n == "examples")
     {
@@ -149,3 +164,20 @@ fn should_descend(name: &str) -> bool {
         || name.contains("crates.io")
         || name.starts_with("index.")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_binaries_share_profile_jassets_directory() {
+        let java = Path::new("/tmp/target/debug/build/zetasketch-java/hash/out/java-test");
+        let conformance = Path::new("/tmp/target/debug/build/zetasketch-rs/hash/out/conformance");
+        let expected = Path::new("/tmp/target/debug");
+
+        assert_eq!(profile_dir_from_exe(java).unwrap(), expected);
+        assert_eq!(profile_dir_from_exe(conformance).unwrap(), expected);
+    }
+}
+
+
