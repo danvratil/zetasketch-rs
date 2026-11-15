@@ -145,7 +145,7 @@ jobs:
           run: |
             cd python
             set -e
-            apk add py3-pip py3-virtualenv
+            apk add py3-pip py3-virtualenv gcc
             python3 -m virtualenv .venv
             source .venv/bin/activate
             pip install --upgrade pip
