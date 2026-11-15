@@ -179,5 +179,3 @@ mod tests {
         assert_eq!(profile_dir_from_exe(conformance).unwrap(), expected);
     }
 }
-
-
