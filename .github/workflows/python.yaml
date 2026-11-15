@@ -29,8 +29,8 @@ jobs:
             target: x86
           - runner: ubuntu-22.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
+          #- runner: ubuntu-22.04
+          #  target: armv7
           - runner: ubuntu-22.04
             target: s390x
           - runner: ubuntu-22.04
@@ -103,8 +103,8 @@ jobs:
             target: x86
           - runner: ubuntu-22.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
+          #- runner: ubuntu-22.04
+          #  target: armv7
     steps:
       - uses: actions/checkout@v5
       - name: Install protoc
@@ -209,7 +209,7 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/Scripts/activate
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install zetasketch-py --find-links dist --force-reinstall
           pip install --group test
           pytest -k "not mypy and not ruff"
