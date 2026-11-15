@@ -113,7 +113,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y --no-install-recommends protobuf-compiler
       - uses: actions/setup-python@v6
         with:
-          python-version: 3.x
+          python-version: 3.14
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -187,7 +187,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v6
         with:
-          python-version: 3.x
+          python-version: 3.14
           architecture: ${{ matrix.platform.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
@@ -230,7 +230,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v6
         with:
-          python-version: 3.x
+          python-version: 3.14
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
